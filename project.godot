@@ -14,6 +14,10 @@ config/name="tres-b"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
+[autoload]
+
+GameState="*uid://dgp3h31q3hvw8"
+
 [display]
 
 window/stretch/mode="canvas_items"
