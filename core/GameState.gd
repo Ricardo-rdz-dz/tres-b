@@ -16,6 +16,8 @@ var is_night: bool = false
 
 # Inventario: lista de diccionarios { "id", "name", "cost", "sell_price", "stock" }
 var inventory: Array[Dictionary] = []
+# Venta agendada actual { "buyer_name", "item", "location", "agreed_price" }
+var active_order: Dictionary = {}
 
 func register_sale(cost: float, final_price: float) -> void:
 	var profit: float = final_price - cost

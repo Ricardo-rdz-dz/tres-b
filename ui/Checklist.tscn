@@ -1,0 +1,54 @@
+[gd_scene format=3 uid="uid://bh6jmyfthru5f"]
+
+[ext_resource type="Script" uid="uid://bxfi8ahld7sod" path="res://ui/Checklist.gd" id="1_afuqj"]
+
+[node name="Checklist" type="Control" unique_id=458145500]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_afuqj")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1123591160]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.11764706, 0.13333334, 0.1764706, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1598585237]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=1054110257]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=530337203]
+layout_mode = 2
+text = "Revisa que lleves todo antes de salir"
+horizontal_alignment = 1
+
+[node name="DeviceCheck" type="CheckBox" parent="CenterContainer/VBoxContainer" unique_id=856906971]
+layout_mode = 2
+text = "Dispositivo para la venta"
+
+[node name="ChargerCheck" type="CheckBox" parent="CenterContainer/VBoxContainer" unique_id=179705991]
+layout_mode = 2
+text = "Cargador"
+
+[node name="WarrantyCheck" type="CheckBox" parent="CenterContainer/VBoxContainer" unique_id=1192525351]
+layout_mode = 2
+text = "Nota de la garantia"
+
+[node name="DriveButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1770072491]
+layout_mode = 2
+text = "Subir al auto y salir ->"

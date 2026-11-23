@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://gppl03woxwxc"]
+
+[ext_resource type="Script" uid="uid://v8m2bm5u2ooy" path="res://ui/InventoryApp.gd" id="1_bcgrv"]
+
+[node name="InventoryApp" type="Control" unique_id=1827426697]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_bcgrv")
+
+[node name="Background" type="ColorRect" parent="." unique_id=536057525]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.11764706, 0.13333334, 0.1764706, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=630866056]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="MainLayout" type="VBoxContainer" parent="MarginContainer" unique_id=1400036556]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/MainLayout" unique_id=1425305104]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/MainLayout/Header" unique_id=669494029]
+layout_mode = 2
+text = "Arma tu inventario"
+
+[node name="CapitalLabel" type="Label" parent="MarginContainer/MainLayout/Header" unique_id=90326094]
+layout_mode = 2
+
+[node name="ProductList" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=855276017]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="ContinueButton" type="Button" parent="MarginContainer/MainLayout" unique_id=256578230]
+layout_mode = 2
+text = "Publicar anuncios en redes sociales"

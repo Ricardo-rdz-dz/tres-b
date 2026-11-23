@@ -1,0 +1,59 @@
+[gd_scene format=3 uid="uid://sesv1yoyrx5y"]
+
+[ext_resource type="Script" uid="uid://d0vy4rbcrc85w" path="res://ui/onboarding.gd" id="1_dyeu2"]
+
+[node name="Onboarding" type="Control" unique_id=1264269181]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_dyeu2")
+
+[node name="Background" type="ColorRect" parent="." unique_id=513054722]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.11764706, 0.13333334, 0.1764706, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1981351417]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=72852883]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=1295034312]
+layout_mode = 2
+text = "Bienvenido a Tres-B"
+
+[node name="NameInput" type="LineEdit" parent="CenterContainer/VBoxContainer" unique_id=1654022065]
+layout_mode = 2
+placeholder_text = "Escribe tu bombre de usuario"
+
+[node name="BusinessOption" type="OptionButton" parent="CenterContainer/VBoxContainer" unique_id=91874361]
+layout_mode = 2
+selected = 1
+item_count = 2
+popup/item_0/text = "Electronicos ($5,000)"
+popup/item_0/id = 0
+popup/item_1/text = "Selecciona un emprendimiento"
+popup/item_1/id = 1
+popup/item_1/disabled = true
+
+[node name="StoryLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=1766226271]
+layout_mode = 2
+text = "Decidiste empezar un nuevo emprendimiento con un ahorro de $5,000MXN. Compra tus primeros productos y cumple tu meta."
+
+[node name="StartButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1580680035]
+layout_mode = 2
+text = "Comenzar emprendimiento"

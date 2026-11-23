@@ -1,0 +1,91 @@
+[gd_scene format=3 uid="uid://mbngjl7r0j23"]
+
+[ext_resource type="Script" uid="uid://cako0efmbqia6" path="res://modules/driving/CarDashboard.gd" id="1_vnmhx"]
+
+[node name="CarDashboard" type="Control" unique_id=1029837466]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_vnmhx")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1276946694]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08235294, 0.09411765, 0.12941177, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1673389078]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="MainLayout" type="VBoxContainer" parent="MarginContainer" unique_id=1527904711]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="StatusBar" type="HBoxContainer" parent="MarginContainer/MainLayout" unique_id=393520566]
+layout_mode = 2
+
+[node name="DestinationLabel" type="Label" parent="MarginContainer/MainLayout/StatusBar" unique_id=419864202]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CapitalLabel" type="Label" parent="MarginContainer/MainLayout/StatusBar" unique_id=1178953707]
+layout_mode = 2
+
+[node name="Windshield" type="ColorRect" parent="MarginContainer/MainLayout" unique_id=524448101]
+layout_mode = 2
+size_flags_vertical = 3
+color = Color(0.14901961, 0.17254902, 0.22745098, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="MarginContainer/MainLayout/Windshield" unique_id=1846118152]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RoadStatusLabel" type="Label" parent="MarginContainer/MainLayout/Windshield/CenterContainer" unique_id=1879428292]
+layout_mode = 2
+
+[node name="ProgressBar" type="ProgressBar" parent="MarginContainer/MainLayout" unique_id=974631805]
+layout_mode = 2
+
+[node name="NotificationPanel" type="PanelContainer" parent="MarginContainer/MainLayout" unique_id=21976494]
+layout_mode = 2
+
+[node name="NotifLayout" type="VBoxContainer" parent="MarginContainer/MainLayout/NotificationPanel" unique_id=730421609]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="NotifLabel" type="Label" parent="MarginContainer/MainLayout/NotificationPanel/NotifLayout" unique_id=1911807657]
+layout_mode = 2
+
+[node name="NotifButtons" type="HBoxContainer" parent="MarginContainer/MainLayout/NotificationPanel/NotifLayout" unique_id=1075386986]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ReplyDrivingButton" type="Button" parent="MarginContainer/MainLayout/NotificationPanel/NotifLayout/NotifButtons" unique_id=1557959298]
+layout_mode = 2
+text = "Orillarse y contestar (seguridad)"
+
+[node name="PullOverButton" type="Button" parent="MarginContainer/MainLayout/NotificationPanel/NotifLayout/NotifButtons" unique_id=613771077]
+layout_mode = 2
+
+[node name="ArriveButton" type="Button" parent="MarginContainer/MainLayout" unique_id=1448163385]
+layout_mode = 2
+text = "Bajar del auto ->"
