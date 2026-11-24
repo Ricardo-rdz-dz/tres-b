@@ -14,17 +14,26 @@ var catalog: Array[Dictionary] = [
 
 func _ready() -> void:
 	continue_button.pressed.connect(_on_continue_pressed)
+	product_list.add_theme_constant_override("separation", 12)
 	_build_product_rows()
 	_update_ui()
 
 func _build_product_rows() -> void:
 	for item in catalog:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
+		var card_panel := PanelContainer.new()
+		card_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
+		var card_layout := VBoxContainer.new()
+		card_layout.add_theme_constant_override("separation", 8)
+
+		# Línea 1: Nombre y costo
 		var name_lbl := Label.new()
 		name_lbl.text = "%s (Cost: $%.0f)" % [item["name"], item["cost"]]
-		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+		# Línea 2: Precio de venta y botones de stock
+		var controls_row := HBoxContainer.new()
+		controls_row.add_theme_constant_override("separation", 8)
 
 		var price_lbl := Label.new()
 		price_lbl.text = "Sell $"
@@ -34,27 +43,35 @@ func _build_product_rows() -> void:
 		price_spin.max_value = 20000.0
 		price_spin.step = 50.0
 		price_spin.value = item["sell_price"]
+		price_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		price_spin.value_changed.connect(func(val): item["sell_price"] = val)
 
 		var stock_lbl := Label.new()
 		stock_lbl.name = "StockLabel"
 		stock_lbl.text = "Qty: 0"
+		stock_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		stock_lbl.custom_minimum_size = Vector2(56, 0)
 
 		var minus_btn := Button.new()
 		minus_btn.text = "-"
+		minus_btn.custom_minimum_size = Vector2(40, 0)
 		minus_btn.pressed.connect(func(): _change_stock(item, -1, stock_lbl))
 
 		var plus_btn := Button.new()
 		plus_btn.text = "+"
+		plus_btn.custom_minimum_size = Vector2(40, 0)
 		plus_btn.pressed.connect(func(): _change_stock(item, 1, stock_lbl))
 
-		row.add_child(name_lbl)
-		row.add_child(price_lbl)
-		row.add_child(price_spin)
-		row.add_child(minus_btn)
-		row.add_child(stock_lbl)
-		row.add_child(plus_btn)
-		product_list.add_child(row)
+		controls_row.add_child(price_lbl)
+		controls_row.add_child(price_spin)
+		controls_row.add_child(minus_btn)
+		controls_row.add_child(stock_lbl)
+		controls_row.add_child(plus_btn)
+
+		card_layout.add_child(name_lbl)
+		card_layout.add_child(controls_row)
+		card_panel.add_child(card_layout)
+		product_list.add_child(card_panel)
 
 func _change_stock(item: Dictionary, delta: int, stock_lbl: Label) -> void:
 	if delta > 0 and GameState.capital >= item["cost"]:

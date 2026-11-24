@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://4vbsw23jwvhc"]
+
+[ext_resource type="Script" uid="uid://b6v6bbacymiom" path="res://modules/delivery/DeliveryScene.gd" id="1_l5w8h"]
+[ext_resource type="Script" uid="uid://d1sx4pt6oqjmi" path="res://core/SafeAreaMargin.gd" id="2_oam6o"]
+
+[node name="DeliveryScene" type="Control" unique_id=41938918]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_l5w8h")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1407466149]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.11764706, 0.13333334, 0.1764706, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=411549152]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_oam6o")
+
+[node name="MainLayout" type="VBoxContainer" parent="MarginContainer" unique_id=1177602338]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Header" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=25962124]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/MainLayout/Header" unique_id=1320015665]
+layout_mode = 2
+text = "Entrega con cliente"
+autowrap_mode = 3
+
+[node name="CapitalLabel" type="Label" parent="MarginContainer/MainLayout/Header" unique_id=996837755]
+layout_mode = 2
+text = "Capital: $0.00 MXN"
+
+[node name="OrderCard" type="PanelContainer" parent="MarginContainer/MainLayout" unique_id=682890573]
+layout_mode = 2
+
+[node name="OrderInfoLabel" type="Label" parent="MarginContainer/MainLayout/OrderCard" unique_id=2102868104]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="DialogueCard" type="PanelContainer" parent="MarginContainer/MainLayout" unique_id=1163461815]
+layout_mode = 2
+
+[node name="DialogueLabel" type="Label" parent="MarginContainer/MainLayout/DialogueCard" unique_id=826077219]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="ActionButtons" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=2005511579]
+layout_mode = 2
+theme_override_constants/separation = 10

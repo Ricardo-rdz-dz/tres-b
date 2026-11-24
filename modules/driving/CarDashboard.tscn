@@ -1,6 +1,10 @@
 [gd_scene format=3 uid="uid://mbngjl7r0j23"]
 
 [ext_resource type="Script" uid="uid://cako0efmbqia6" path="res://modules/driving/CarDashboard.gd" id="1_vnmhx"]
+[ext_resource type="Script" uid="uid://cume4uchgbleq" path="res://modules/driving/RoadView.gd" id="2_4gwq1"]
+[ext_resource type="AudioStream" uid="uid://d3r3tqls0ihye" path="res://assets/audio/engineLoop.mp3" id="3_fihrb"]
+[ext_resource type="AudioStream" uid="uid://dkrqlpgrampxw" path="res://assets/audio/notificationPhone.mp3" id="4_v0k4t"]
+[ext_resource type="AudioStream" uid="uid://086nf04ma4o8" path="res://assets/audio/policeSIren.mp3" id="5_mu5kk"]
 
 [node name="CarDashboard" type="Control" unique_id=1029837466]
 layout_mode = 3
@@ -47,9 +51,11 @@ size_flags_horizontal = 3
 layout_mode = 2
 
 [node name="Windshield" type="ColorRect" parent="MarginContainer/MainLayout" unique_id=524448101]
+clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
 color = Color(0.14901961, 0.17254902, 0.22745098, 1)
+script = ExtResource("2_4gwq1")
 
 [node name="CenterContainer" type="CenterContainer" parent="MarginContainer/MainLayout/Windshield" unique_id=1846118152]
 layout_mode = 1
@@ -89,3 +95,12 @@ layout_mode = 2
 [node name="ArriveButton" type="Button" parent="MarginContainer/MainLayout" unique_id=1448163385]
 layout_mode = 2
 text = "Bajar del auto ->"
+
+[node name="EngineAudio" type="AudioStreamPlayer" parent="." unique_id=1657177779]
+stream = ExtResource("3_fihrb")
+
+[node name="NotificationAudio" type="AudioStreamPlayer" parent="." unique_id=468435747]
+stream = ExtResource("4_v0k4t")
+
+[node name="FineAudio" type="AudioStreamPlayer" parent="." unique_id=899142352]
+stream = ExtResource("5_mu5kk")

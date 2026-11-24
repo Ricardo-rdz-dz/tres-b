@@ -11,6 +11,7 @@ config_version=5
 [application]
 
 config/name="tres-b"
+run/main_scene="uid://sesv1yoyrx5y"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
@@ -20,8 +21,15 @@ GameState="*uid://dgp3h31q3hvw8"
 
 [display]
 
+window/size/viewport_width=540
+window/size/viewport_height=960
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[gui]
+
+theme/custom="uid://dwngi7xcymcvq"
 
 [physics]
 

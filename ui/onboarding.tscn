@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://sesv1yoyrx5y"]
 
 [ext_resource type="Script" uid="uid://d0vy4rbcrc85w" path="res://ui/onboarding.gd" id="1_dyeu2"]
+[ext_resource type="Script" uid="uid://d1sx4pt6oqjmi" path="res://core/SafeAreaMargin.gd" id="2_2pb4t"]
 
 [node name="Onboarding" type="Control" unique_id=1264269181]
 layout_mode = 3
@@ -27,8 +28,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("2_2pb4t")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=72852883]
+custom_minimum_size = Vector2(440, 0)
 layout_mode = 2
 theme_override_constants/separation = 16
 
@@ -53,6 +56,7 @@ popup/item_1/disabled = true
 [node name="StoryLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=1766226271]
 layout_mode = 2
 text = "Decidiste empezar un nuevo emprendimiento con un ahorro de $5,000MXN. Compra tus primeros productos y cumple tu meta."
+autowrap_mode = 3
 
 [node name="StartButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1580680035]
 layout_mode = 2

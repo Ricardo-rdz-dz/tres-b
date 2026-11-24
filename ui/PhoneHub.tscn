@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://b871mcjyh5rpm"]
 
 [ext_resource type="Script" uid="uid://dcj8j4jtra5e4" path="res://ui/PhoneHub.gd" id="1_1cbpw"]
+[ext_resource type="Script" uid="uid://d1sx4pt6oqjmi" path="res://core/SafeAreaMargin.gd" id="2_imvbj"]
 
 [node name="PhoneHub" type="Control" unique_id=1570322965]
 layout_mode = 3
@@ -31,28 +32,32 @@ theme_override_constants/margin_left = 32
 theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 32
 theme_override_constants/margin_bottom = 32
+script = ExtResource("2_imvbj")
 
 [node name="MainLayout" type="VBoxContainer" parent="MarginContainer" unique_id=1603439031]
+custom_minimum_size = Vector2(460, 0)
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="TopBar" type="HBoxContainer" parent="MarginContainer/MainLayout" unique_id=1536737516]
+[node name="TopBar" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=33122414]
 layout_mode = 2
 
 [node name="GoalLabel" type="Label" parent="MarginContainer/MainLayout/TopBar" unique_id=123834891]
 layout_mode = 2
 size_flags_horizontal = 3
+autowrap_mode = 3
 
 [node name="CapitalLabel" type="Label" parent="MarginContainer/MainLayout/TopBar" unique_id=974752519]
 layout_mode = 2
 
 [node name="ViewsLabel" type="Label" parent="MarginContainer/MainLayout" unique_id=1221278578]
 layout_mode = 2
+autowrap_mode = 3
 
 [node name="ChatBox" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=1127236235]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="ReplyButtons" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=465628824]
+[node name="ReplyButtons" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=1013377771]
 layout_mode = 2
 theme_override_constants/separation = 14

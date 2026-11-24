@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://gppl03woxwxc"]
 
 [ext_resource type="Script" uid="uid://v8m2bm5u2ooy" path="res://ui/InventoryApp.gd" id="1_bcgrv"]
+[ext_resource type="Script" uid="uid://d1sx4pt6oqjmi" path="res://core/SafeAreaMargin.gd" id="2_mx8l5"]
 
 [node name="InventoryApp" type="Control" unique_id=1827426697]
 layout_mode = 3
@@ -21,6 +22,7 @@ grow_vertical = 2
 color = Color(0.11764706, 0.13333334, 0.1764706, 1)
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=630866056]
+custom_minimum_size = Vector2(440, 0)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -31,12 +33,13 @@ theme_override_constants/margin_left = 32
 theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 32
 theme_override_constants/margin_bottom = 32
+script = ExtResource("2_mx8l5")
 
 [node name="MainLayout" type="VBoxContainer" parent="MarginContainer" unique_id=1400036556]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="Header" type="HBoxContainer" parent="MarginContainer/MainLayout" unique_id=1425305104]
+[node name="Header" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=1468075994]
 layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="MarginContainer/MainLayout/Header" unique_id=669494029]
