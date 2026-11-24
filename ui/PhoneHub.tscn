@@ -42,6 +42,18 @@ theme_override_constants/separation = 14
 [node name="TopBar" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=33122414]
 layout_mode = 2
 
+[node name="ClockRow" type="HBoxContainer" parent="MarginContainer/MainLayout/TopBar" unique_id=1653509705]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ClockLabel" type="Label" parent="MarginContainer/MainLayout/TopBar/ClockRow" unique_id=844535647]
+layout_mode = 2
+
+[node name="SpeedButton" type="Button" parent="MarginContainer/MainLayout/TopBar/ClockRow" unique_id=1910233673]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+text = "1x"
+
 [node name="GoalLabel" type="Label" parent="MarginContainer/MainLayout/TopBar" unique_id=123834891]
 layout_mode = 2
 size_flags_horizontal = 3

@@ -5,16 +5,25 @@ extends Control
 @onready var views_label: Label = $MarginContainer/MainLayout/ViewsLabel
 @onready var chat_box: VBoxContainer = $MarginContainer/MainLayout/ChatBox
 @onready var reply_buttons: VBoxContainer = $MarginContainer/MainLayout/ReplyButtons
+@onready var clock_label: Label = $MarginContainer/MainLayout/TopBar/ClockRow/ClockLabel
+@onready var speed_button: Button = $MarginContainer/MainLayout/TopBar/ClockRow/SpeedButton
 
 var current_buyer: String = "Carlos M."
 var selected_item: Dictionary = {}
 var chat_step: int = 0
 
 func _ready() -> void:
+	GameState.start_clock()
+	GameState.time_updated.connect(_on_time_updated)	# Dentro de _ready():
+	speed_button.pressed.connect(_on_speed_button_pressed)
+	_on_time_updated(GameState.current_day, GameState.get_current_hour(), GameState.get_current_minute(), GameState.get_formatted_time())
 	_update_header()
 	if GameState.inventory.is_empty():
 		views_label.text = "No items in stock."
 		return
+		
+				
+
 
 	# Elegimos un producto de tu inventario para que un cliente pregunte por él
 	selected_item = GameState.inventory.pick_random()
@@ -23,6 +32,7 @@ func _ready() -> void:
 		views, selected_item["name"], selected_item["sell_price"]
 	]
 	_start_chat()
+	
 
 func _update_header() -> void:
 	goal_label.text = "Goal: %s ($%.0f / $%.0f)" % [
@@ -77,3 +87,11 @@ func _on_choose_location(location: String) -> void:
 func _on_start_delivery() -> void:
 	print("Order scheduled: ", GameState.active_order)
 	get_tree().change_scene_to_file("res://ui/Checklist.tscn")
+
+func _on_time_updated(day: int, _hour: int, _minute: int, formatted_time: String) -> void:
+	clock_label.text = "Día %d | %s (%s)" % [day, formatted_time, GameState.get_day_phase_name()]
+
+# Al final del archivo:
+func _on_speed_button_pressed() -> void:
+	var new_speed: float = GameState.toggle_fast_forward()
+	speed_button.text = "1x" if new_speed < 2.0 else "2.5x"
