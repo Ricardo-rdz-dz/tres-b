@@ -337,3 +337,108 @@ func get_goals_summary_text() -> String:
 		var tag: String = " [URGENTE]" if goal["urgent"] else ""
 		lines.append("%s %s%s: $%.0f / $%.0f" % [check, goal["name"], tag, goal["progress"], goal["target"]])
 	return "\n".join(lines)
+	
+# ==============================================================================
+# BLOQUE 2.1 (PASO 4): GUARDADO LOCAL CIFRADO Y BANCARROTA
+# ==============================================================================
+
+const SAVE_PATH: String = "user://savegame.dat"
+const SAVE_PASS: String = "tres_b_save_key_2026"
+const MIN_VIABLE_CAPITAL: float = 500.0 # Capital mínimo para comprar el producto más barato
+
+signal game_saved()
+signal game_loaded()
+signal bankruptcy_triggered(current_capital: float)
+
+func has_save_file() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+func save_game() -> bool:
+	var save_data: Dictionary = {
+		"capital": capital,
+		"inventory": inventory,
+		"current_day": current_day,
+		"time_in_minutes": time_in_minutes,
+		"is_night": is_night,
+		"current_location_id": current_location_id,
+		"odometer_km": odometer_km,
+		"fuel_level": fuel_level,
+		"current_level": current_level,
+		"active_goals": active_goals
+	}
+
+	var file: FileAccess = FileAccess.open_encrypted_with_pass(SAVE_PATH, FileAccess.WRITE, SAVE_PASS)
+	if file == null:
+		push_error("No se pudo abrir el archivo de guardado: %s" % FileAccess.get_open_error())
+		return false
+
+	file.store_string(JSON.stringify(save_data))
+	file.close()
+	game_saved.emit()
+	return true
+
+func load_game() -> bool:
+	if not has_save_file():
+		return false
+
+	var file: FileAccess = FileAccess.open_encrypted_with_pass(SAVE_PATH, FileAccess.READ, SAVE_PASS)
+	if file == null:
+		push_error("No se pudo leer el archivo de guardado.")
+		return false
+
+	var json_text: String = file.get_as_text()
+	file.close()
+
+	var parsed: Variant = JSON.parse_string(json_text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_error("El archivo de guardado está dañado.")
+		return false
+
+	var data: Dictionary = parsed
+	capital = float(data.get("capital", 5000.0))
+
+	if data.has("inventory") and typeof(data["inventory"]) == TYPE_ARRAY:
+		inventory.assign(data["inventory"])
+
+	current_day = int(data.get("current_day", 1))
+	time_in_minutes = float(data.get("time_in_minutes", 480.0))
+	is_night = bool(data.get("is_night", false))
+	current_location_id = String(data.get("current_location_id", "casa"))
+	odometer_km = float(data.get("odometer_km", 0.0))
+	fuel_level = float(data.get("fuel_level", 100.0))
+	current_level = int(data.get("current_level", 1))
+
+	active_goals.clear()
+	if data.has("active_goals") and typeof(data["active_goals"]) == TYPE_ARRAY:
+		for g in data["active_goals"]:
+			if typeof(g) == TYPE_DICTIONARY:
+				active_goals.append(g)
+
+	if active_goals.is_empty():
+		load_level_goals(current_level)
+
+	_last_emitted_minute = -1
+	_current_phase = get_day_phase()
+	is_night = (_current_phase == DayPhase.NIGHT)
+
+	goals_updated.emit(current_level, active_goals)
+	time_updated.emit(current_day, get_current_hour(), get_current_minute(), get_formatted_time())
+	game_loaded.emit()
+	return true
+
+func delete_save() -> void:
+	if has_save_file():
+		DirAccess.remove_absolute(SAVE_PATH)
+
+func check_bankruptcy() -> bool:
+	# Quiebra si no tienes inventario para vender y tu capital no alcanza para comprar stock
+	if inventory.is_empty() and capital < MIN_VIABLE_CAPITAL:
+		bankruptcy_triggered.emit(capital)
+		return true
+	return false
+
+func take_emergency_loan(amount: float = 2000.0, interest_rate: float = 0.25) -> void:
+	capital += amount
+	var total_to_pay: float = amount * (1.0 + interest_rate)
+	add_custom_goal("Préstamo de Emergencia", total_to_pay, true)
+	save_game()

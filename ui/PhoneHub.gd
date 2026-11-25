@@ -15,7 +15,8 @@ var chat_step: int = 0
 func _ready() -> void:
 	GameState.start_clock()
 	GameState.time_updated.connect(_on_time_updated)	# Dentro de _ready():
-	speed_button.pressed.connect(_on_speed_button_pressed)
+	speed_button.pressed.connect(_on_speed_button_pressed)	
+	GameState.goals_updated.connect(func(_lvl, _goals): _update_header())	
 	_on_time_updated(GameState.current_day, GameState.get_current_hour(), GameState.get_current_minute(), GameState.get_formatted_time())
 	_update_header()
 	if GameState.inventory.is_empty():
@@ -35,9 +36,7 @@ func _ready() -> void:
 	
 
 func _update_header() -> void:
-	goal_label.text = "Goal: %s ($%.0f / $%.0f)" % [
-		GameState.active_goal_name, GameState.goal_progress, GameState.active_goal_target
-	]
+	goal_label.text = GameState.get_goals_summary_text()
 	capital_label.text = "Capital: $%.0f" % GameState.capital
 
 func _add_message(sender: String, text: String) -> void:

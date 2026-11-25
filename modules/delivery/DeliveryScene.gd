@@ -118,6 +118,11 @@ func _complete_sale(method: String) -> void:
 	# Actualizar capital y progreso de meta
 	GameState.capital += final_price
 	GameState.goal_progress += profit
+	GameState.contribute_to_goals(profit)
+
+	# ... (aquí va tu lógica actual donde quitas el item del inventario) ...
+
+	GameState.save_game()
 
 	# Descontar del inventario
 	var item_id: String = str(item.get("id", ""))
