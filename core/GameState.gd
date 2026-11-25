@@ -442,3 +442,234 @@ func take_emergency_loan(amount: float = 2000.0, interest_rate: float = 0.25) ->
 	var total_to_pay: float = amount * (1.0 + interest_rate)
 	add_custom_goal("Préstamo de Emergencia", total_to_pay, true)
 	save_game()
+	
+# ==============================================================================
+# BLOQUE 2.2: CATÁLOGO DE DIÁLOGOS Y BANDEJA DE CHATS (ESTILO MESSENGER)
+# ==============================================================================
+
+const DIALOGUES_PATH: String = "res://data/dialogues.json"
+
+signal chats_updated()
+signal new_chat_received(chat: Dictionary)
+
+var dialogues_catalog: Dictionary = {}
+var active_chats: Array[Dictionary] = []
+var _next_chat_id: int = 1
+
+func load_dialogues_catalog() -> bool:
+	if not dialogues_catalog.is_empty():
+		return true
+	if not FileAccess.file_exists(DIALOGUES_PATH):
+		push_error("No se encontró %s" % DIALOGUES_PATH)
+		return false
+
+	var file: FileAccess = FileAccess.open(DIALOGUES_PATH, FileAccess.READ)
+	if file == null:
+		return false
+
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	file.close()
+
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_error("Error al parsear dialogues.json")
+		return false
+
+	dialogues_catalog = parsed
+	return true
+
+func get_total_game_minutes() -> float:
+	return float((current_day - 1) * 1440) + time_in_minutes
+
+func format_message_timestamp(msg_day: int, msg_time_str: String) -> String:
+	if msg_day == current_day:
+		return msg_time_str
+	return "Día %d · %s" % [msg_day, msg_time_str]
+
+func _fill_template(template: String, vars: Dictionary) -> String:
+	var result: String = template
+	for key in vars.keys():
+		result = result.replace("{%s}" % str(key), str(vars[key]))
+	return result
+
+func generate_incoming_chat() -> Dictionary:
+	if inventory.is_empty():
+		return {}
+	if not load_dialogues_catalog():
+		return {}
+
+	var archetypes: Array = dialogues_catalog.get("archetypes", [])
+	var names: Array = dialogues_catalog.get("names", ["Cliente"])
+	if archetypes.is_empty():
+		return {}
+
+	var arch: Dictionary = archetypes[randi() % archetypes.size()]
+	var client_name: String = String(names[randi() % names.size()])
+	var item: Dictionary = inventory[randi() % inventory.size()]
+
+	var item_name: String = String(item.get("name", "Equipo"))
+	var item_cost: float = float(item.get("cost", 1000.0))
+	var base_price: float = float(item.get("price", item.get("sell_price", snappedf(item_cost * 1.35, 50.0))))
+	var offer_price: float = snappedf(base_price * float(arch.get("offer_multiplier", 1.0)), 50.0)
+
+	var pref_locs: Array = arch.get("preferred_locations", ["plaza_central"])
+	var loc_id: String = String(pref_locs[randi() % pref_locs.size()])
+	var route_info: Dictionary = get_route_summary(loc_id)
+
+	var profile_pool: Array = arch.get("profile_pool", [])
+	var profile: Dictionary = {"has_photo": true, "account_age": "1 año", "friends": 100, "red_flag_score": 0}
+	if not profile_pool.is_empty():
+		profile = profile_pool[randi() % profile_pool.size()].duplicate(true)
+
+	var openers: Array = arch.get("openers", ["Hola, ¿sigue disponible el {producto}?"])
+	var raw_opener: String = String(openers[randi() % openers.size()])
+	var vars: Dictionary = {
+		"producto": item_name,
+		"precio": int(base_price),
+		"oferta": int(offer_price),
+		"ubicacion": route_info["name"]
+	}
+	var opener_text: String = _fill_template(raw_opener, vars)
+
+	var now_total: float = get_total_game_minutes()
+	var now_str: String = get_formatted_time()
+
+	var chat: Dictionary = {
+		"id": _next_chat_id,
+		"client_name": client_name,
+		"archetype_id": String(arch.get("id", "serio")),
+		"archetype_label": String(arch.get("label", "Cliente")),
+		"item": item.duplicate(true),
+		"base_price": base_price,
+		"offered_price": offer_price,
+		"location_id": loc_id,
+		"location_name": route_info["name"],
+		"profile": profile,
+		"patience_minutes": float(arch.get("patience_minutes", 180.0)),
+		"late_chance": float(arch.get("late_still_interested_chance", 0.5)),
+		"unread": true,
+		"status": "open", # open, accepted, lost, rejected
+		"created_total_min": now_total,
+		"last_updated_total_min": now_total,
+		"last_msg_day": current_day,
+		"last_msg_time_str": now_str,
+		"messages": [
+			{
+				"sender": "client",
+				"text": opener_text,
+				"day": current_day,
+				"time_str": now_str
+			}
+		]
+	}
+
+	_next_chat_id += 1
+	active_chats.append(chat)
+	new_chat_received.emit(chat)
+	chats_updated.emit()
+	return chat
+
+func get_sorted_chats() -> Array[Dictionary]:
+	var sorted: Array[Dictionary] = active_chats.duplicate()
+	sorted.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a.get("last_updated_total_min", 0.0)) > float(b.get("last_updated_total_min", 0.0))
+	)
+	return sorted
+
+func get_chat_by_id(chat_id: int) -> Dictionary:
+	for chat in active_chats:
+		if int(chat.get("id", -1)) == chat_id:
+			return chat
+	return {}
+
+func mark_chat_read(chat_id: int) -> void:
+	var chat: Dictionary = get_chat_by_id(chat_id)
+	if chat.is_empty():
+		return
+	if bool(chat.get("unread", false)):
+		chat["unread"] = false
+		chats_updated.emit()
+
+func append_chat_message(chat_id: int, sender: String, text: String) -> void:
+	var chat: Dictionary = get_chat_by_id(chat_id)
+	if chat.is_empty():
+		return
+	var now_str: String = get_formatted_time()
+	var msgs: Array = chat["messages"]
+	msgs.append({
+		"sender": sender,
+		"text": text,
+		"day": current_day,
+		"time_str": now_str
+	})
+	chat["last_updated_total_min"] = get_total_game_minutes()
+	chat["last_msg_day"] = current_day
+	chat["last_msg_time_str"] = now_str
+	if sender == "client":
+		chat["unread"] = true
+	chats_updated.emit()
+
+func respond_to_chat(chat_id: int, action: String) -> String:
+	# action: "accept" (acepta oferta), "counter_full" (pide precio completo), "reject" (rechaza)
+	var chat: Dictionary = get_chat_by_id(chat_id)
+	if chat.is_empty() or chat["status"] != "open":
+		return "closed"
+
+	var arch: Dictionary = {}
+	for a in dialogues_catalog.get("archetypes", []):
+		if String(a.get("id", "")) == String(chat["archetype_id"]):
+			arch = a
+			break
+
+	var vars: Dictionary = {
+		"producto": String(chat["item"].get("name", "Equipo")),
+		"precio": int(chat["base_price"]),
+		"oferta": int(chat["offered_price"]),
+		"ubicacion": String(chat["location_name"])
+	}
+
+	if action == "reject":
+		append_chat_message(chat_id, "player", "Por el momento no me conviene, gracias.")
+		chat["status"] = "rejected"
+		chats_updated.emit()
+		return "rejected"
+
+	var player_msg: String = "¡Trato hecho en $%d! Nos vemos en %s." % [int(chat["offered_price"]), chat["location_name"]]
+	if action == "counter_full":
+		player_msg = "Lo menos son $%d, ¿te animas?" % int(chat["base_price"])
+	append_chat_message(chat_id, "player", player_msg)
+
+	# Evaluar si el jugador respondió tarde (incluso al día siguiente)
+	var elapsed_min: float = get_total_game_minutes() - float(chat["created_total_min"])
+	if elapsed_min > float(chat["patience_minutes"]):
+		if randf() > float(chat["late_chance"]):
+			var lost_pool: Array = arch.get("late_lost", ["Ya compré otro, gracias."])
+			var lost_text: String = _fill_template(String(lost_pool[randi() % lost_pool.size()]), vars)
+			append_chat_message(chat_id, "client", lost_text)
+			chat["status"] = "lost"
+			chats_updated.emit()
+			return "lost"
+		else:
+			var late_ok_pool: Array = arch.get("late_interested", ["Sí, todavía me interesa."])
+			var late_ok_text: String = _fill_template(String(late_ok_pool[randi() % late_ok_pool.size()]), vars)
+			append_chat_message(chat_id, "client", late_ok_text)
+
+	if action == "counter_full":
+		if randf() <= 0.55:
+			var ok_pool: Array = arch.get("reject_haggle_accept", ["Está bien, te doy los ${precio}."])
+			append_chat_message(chat_id, "client", _fill_template(String(ok_pool[randi() % ok_pool.size()]), vars))
+			chat["offered_price"] = chat["base_price"]
+			chat["status"] = "accepted"
+			chats_updated.emit()
+			return "accepted"
+		else:
+			var leave_pool: Array = arch.get("reject_haggle_leave", ["Así está caro, paso."])
+			append_chat_message(chat_id, "client", _fill_template(String(leave_pool[randi() % leave_pool.size()]), vars))
+			chat["status"] = "lost"
+			chats_updated.emit()
+			return "lost"
+
+	var accept_pool: Array = arch.get("accept_reply", ["Perfecto, te veo en {ubicacion}."])
+	append_chat_message(chat_id, "client", _fill_template(String(accept_pool[randi() % accept_pool.size()]), vars))
+	chat["status"] = "accepted"
+	chats_updated.emit()
+	return "accepted"

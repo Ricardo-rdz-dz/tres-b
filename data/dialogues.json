@@ -1,0 +1,119 @@
+{
+	"names": [
+		"Carlos M.", "Andrea R.", "Luis Fernando", "Sofía G.",
+		"Kevin V.", "Mariana L.", "Jorge P.", "Brayan_99",
+		"Valeria C.", "Diego H.", "Usuario Nuevo", "Fernanda T."
+	],
+	"archetypes": [
+		{
+			"id": "serio",
+			"label": "Comprador Serio",
+			"patience_minutes": 180,
+			"late_still_interested_chance": 0.70,
+			"offer_multiplier": 1.0,
+			"preferred_locations": ["plaza_central", "plaza_norte", "tienda_tech"],
+			"profile_pool": [
+				{"has_photo": true, "account_age": "4 años", "friends": 340, "red_flag_score": 0},
+				{"has_photo": true, "account_age": "2 años", "friends": 185, "red_flag_score": 0}
+			],
+			"openers": [
+				"Hola, ¿todavía tienes disponible el {producto} en ${precio}?",
+				"Buenas, me interesa el {producto}. ¿El precio de ${precio} es fijo?"
+			],
+			"accept_reply": [
+				"Perfecto, me parece justo. ¿Nos vemos en {ubicacion}?",
+				"Trato hecho, paso por él a {ubicacion}."
+			],
+			"late_interested": [
+				"Hola, sí todavía me interesa. ¿Podemos cerrar hoy en {ubicacion}?"
+			],
+			"late_lost": [
+				"Gracias, pero como no me contestaste ya compré uno ayer."
+			]
+		},
+		{
+			"id": "regateador",
+			"label": "Regateador",
+			"patience_minutes": 240,
+			"late_still_interested_chance": 0.55,
+			"offer_multiplier": 0.85,
+			"preferred_locations": ["plaza_central", "super_este", "colonia_sur"],
+			"profile_pool": [
+				{"has_photo": true, "account_age": "3 años", "friends": 210, "red_flag_score": 0},
+				{"has_photo": true, "account_age": "1 año", "friends": 95, "red_flag_score": 1}
+			],
+			"openers": [
+				"¿Cuánto es lo menos por el {producto}? Te doy ${oferta} hoy mismo en efectivo.",
+				"Me interesa el {producto}, pero solo traigo ${oferta}. ¿Te animas?"
+			],
+			"accept_reply": [
+				"¡Excelente! Te veo en {ubicacion} con el efectivo.",
+				"Va que va, nos vemos en {ubicacion}."
+			],
+			"reject_haggle_accept": [
+				"Bueno está bien, te doy los ${precio}, pero sí entrégalo en {ubicacion}."
+			],
+			"reject_haggle_leave": [
+				"Así está muy caro, paso. Suerte con la venta."
+			],
+			"late_interested": [
+				"¿Todavía lo tienes? Mi oferta de ${oferta} sigue en pie."
+			],
+			"late_lost": [
+				"Ya conseguí uno más barato en otro lado, gracias."
+			]
+		},
+		{
+			"id": "urgido",
+			"label": "Cliente Urgido",
+			"patience_minutes": 60,
+			"late_still_interested_chance": 0.15,
+			"offer_multiplier": 1.05,
+			"preferred_locations": ["tienda_tech", "plaza_norte", "fracc_oeste"],
+			"profile_pool": [
+				{"has_photo": true, "account_age": "5 años", "friends": 420, "red_flag_score": 0},
+				{"has_photo": true, "account_age": "1 año", "friends": 130, "red_flag_score": 0}
+			],
+			"openers": [
+				"¡Hola! Me urge el {producto} para hoy. Te doy ${oferta} si puedes entregarlo rápido.",
+				"Necesito el {producto} ya mismo, te pago ${oferta} sin regatear."
+			],
+			"accept_reply": [
+				"¡Súper! Salgo para {ubicacion}, no tardes porfa.",
+				"Genial, te espero en {ubicacion}."
+			],
+			"late_interested": [
+				"Uf, todavía lo necesito, pero ya tiene que ser hoy en {ubicacion}."
+			],
+			"late_lost": [
+				"Me urgía demasiado, ya compré otro hace rato."
+			]
+		},
+		{
+			"id": "sospechoso",
+			"label": "Perfil Dudoso",
+			"patience_minutes": 300,
+			"late_still_interested_chance": 0.85,
+			"offer_multiplier": 1.10,
+			"preferred_locations": ["zona_industrial", "fracc_oeste", "colonia_sur"],
+			"profile_pool": [
+				{"has_photo": false, "account_age": "3 semanas", "friends": 4, "red_flag_score": 3},
+				{"has_photo": false, "account_age": "1 mes", "friends": 11, "red_flag_score": 2}
+			],
+			"openers": [
+				"Qué onda, me interesa el {producto}. Te doy ${oferta} pero ven a {ubicacion}, ahorita no tengo carro.",
+				"Te pago ${oferta} en efectivo por el {producto}, solo que sea en {ubicacion} y sin tanta vuelta."
+			],
+			"accept_reply": [
+				"Va, aquí te espero en {ubicacion}. Avísame cuando vengas llegando.",
+				"Listo, nos vemos en {ubicacion}."
+			],
+			"late_interested": [
+				"Aquí sigo, cuando quieras tráelo a {ubicacion}, tengo el dinero listo."
+			],
+			"late_lost": [
+				"Ya no, gracias."
+			]
+		}
+	]
+}
