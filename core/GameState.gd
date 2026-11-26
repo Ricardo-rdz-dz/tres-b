@@ -531,9 +531,8 @@ func _get_location_coords(loc_id: String) -> Vector2:
 func get_leg_summary(from_loc_id: String, to_loc_id: String) -> Dictionary:
 	var from_pos: Vector2 = _get_location_coords(from_loc_id)
 	var to_pos: Vector2 = _get_location_coords(to_loc_id)
-	var km: float = maxf(0.5, snappedf(from_pos.distance_to(to_pos), 0.1))
+	var km: float = maxf(0.5, snappedf(from_pos.distance_to(to_pos) / 30.0, 0.1))
 	var est_min: int = maxi(2, int(round(km * 1.4)))
-	# $2.5 por km real recorrido (como el circuito incluye ida y vuelta, equivale a los $5/km lineales)
 	var fuel_cost: float = maxf(5.0, snappedf(km * 2.5, 5.0))
 	var dest_name: String = "Base" if (to_loc_id == "" or to_loc_id == "base") else String(city_locations.get(to_loc_id, {}).get("name", to_loc_id))
 	return {

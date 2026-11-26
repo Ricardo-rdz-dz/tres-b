@@ -62,6 +62,7 @@ func _clear_container(container: Node) -> void:
 
 func _add_reply_button(text: String, callback: Callable) -> void:
 	var btn := Button.new()
+	btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	btn.text = text
 	btn.pressed.connect(callback)
 	reply_buttons.add_child(btn)
@@ -80,6 +81,7 @@ func _refresh_ui() -> void:
 func _render_inbox() -> void:
 	_clear_container(chat_box)
 	_clear_container(reply_buttons)
+	views_label.text = "Marketplace · Bandeja de mensajes"
 
 	var all_chats: Array = GameState.get_sorted_chats()
 	var scheduled_chats: Array = []
@@ -155,14 +157,14 @@ func _render_inbox() -> void:
 
 		if not selected_route_ids.is_empty():
 			var summary: Dictionary = GameState.calculate_multi_stop_route(selected_route_ids)
-			var info_txt: String = "Ruta: %d/%d paradas · %.1f km (ida y vuelta) · ~%d min · ~$%.0f gas" % [
+			var info_txt: String = "%d/%d · %.1f km · ~%d min · ~$%.0f gas" % [
 				selected_route_ids.size(),
 				max_stops,
 				float(summary["total_km"]),
 				int(summary["total_min"]),
 				float(summary["total_fuel"])
 			]
-			_add_reply_button("🗺️ Ordenar ruta y salir -> (%s)" % info_txt, func():
+			_add_reply_button("🗺️ Ordenar ruta (%s) ->" % info_txt, func():
 				show_route_planner = true
 				_refresh_ui()
 			)
