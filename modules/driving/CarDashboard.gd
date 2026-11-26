@@ -28,8 +28,18 @@ func _ready() -> void:
 	pull_over_btn.pressed.connect(_on_pull_over_pressed)
 	arrive_btn.pressed.connect(_on_arrive_pressed)
 
+	var leg: Dictionary = GameState.active_order.get("leg", {})
+	var stop_num: int = GameState.current_route_completed_stops + 1
+	var total_stops: int = maxi(1, GameState.current_route_total_stops)
 	var location: String = str(GameState.active_order.get("location", "el punto de entrega"))
-	destination_label.text = "Destino: %s" % location
+	var km: float = float(leg.get("distance_km", 2.0))
+	var est_min: int = int(leg.get("estimated_min", 5))
+
+	if total_stops > 1:
+		destination_label.text = "Parada %d/%d · %s (%.1f km · ~%d min)" % [stop_num, total_stops, location, km, est_min]
+	else:
+		destination_label.text = "Destino: %s (%.1f km · ~%d min)" % [location, km, est_min]
+
 	_update_capital()
 	road_status_label.text = "En camino..."
 	progress_bar.value = 0.0
@@ -103,4 +113,6 @@ func _on_pull_over_pressed() -> void:
 		engine_audio.stream_paused = false
 
 func _on_arrive_pressed() -> void:
+	var leg_min: float = float(GameState.active_order.get("leg", {}).get("estimated_min", 5))
+	GameState.advance_time(leg_min)
 	get_tree().change_scene_to_file("res://modules/delivery/DeliveryScene.tscn")

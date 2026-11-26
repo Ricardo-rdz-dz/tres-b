@@ -23,8 +23,15 @@ func _ready() -> void:
 	final_price = float(order.get("agreed_price", item.get("sell_price", 0.0)))
 	var location: String = str(order.get("location", "Punto de entrega"))
 
+	var stop_num: int = GameState.current_route_completed_stops + 1
+	var total_stops: int = maxi(1, GameState.current_route_total_stops)
+
 	_update_header()
-	title_label.text = "Entrega en: %s" % location
+	if total_stops > 1:
+		title_label.text = "Parada %d/%d · %s" % [stop_num, total_stops, location]
+	else:
+		title_label.text = "Entrega en: %s" % location
+
 	order_info_label.text = "Cliente: %s\nProducto: %s\nPrecio acordado: $%.0f MXN" % [
 		buyer_name,
 		str(item.get("name", "Equipo")),
@@ -52,7 +59,6 @@ func _add_button(text: String, callback: Callable) -> void:
 	action_buttons.add_child(btn)
 
 func _get_checklist_flag(key: String) -> bool:
-	# Busca primero dentro de active_order y luego en un subdiccionario "checklist" si existe
 	if order.has(key):
 		return bool(order[key])
 	if order.has("checklist") and typeof(order["checklist"]) == TYPE_DICTIONARY:
@@ -69,7 +75,7 @@ func _evaluate_package() -> void:
 	if not has_device:
 		dialogue_label.text = "%s: \"¿En serio olvidaste traer el equipo? Así no podemos cerrar el trato. Mejor lo cancelamos.\"" % buyer_name
 		_clear_buttons()
-		_add_button("Disculparse y regresar", _cancel_sale)
+		_add_button("Disculparse y continuar", _cancel_sale)
 		return
 
 	# 2. Si falta el cargador: 25% cancela, 50% pide descuento de $150, 25% paga completo
@@ -78,7 +84,7 @@ func _evaluate_package() -> void:
 		if roll < 0.25:
 			dialogue_label.text = "%s: \"No trae cargador... La verdad así no me sirve, mejor cancelamos la compra.\"" % buyer_name
 			_clear_buttons()
-			_add_button("Entendido, regresar", _cancel_sale)
+			_add_button("Entendido, continuar", _cancel_sale)
 		elif roll < 0.75:
 			var discounted_price: float = maxf(0.0, final_price - 150.0)
 			dialogue_label.text = "%s: \"Oye, le falta el cargador. Si me haces $150 de descuento (me lo dejas en $%.0f) sí me lo llevo.\"" % [
@@ -120,10 +126,6 @@ func _complete_sale(method: String) -> void:
 	GameState.goal_progress += profit
 	GameState.contribute_to_goals(profit)
 
-	# ... (aquí va tu lógica actual donde quitas el item del inventario) ...
-
-	GameState.save_game()
-
 	# Descontar del inventario
 	var item_id: String = str(item.get("id", ""))
 	for i in range(GameState.inventory.size() - 1, -1, -1):
@@ -132,8 +134,9 @@ func _complete_sale(method: String) -> void:
 			if GameState.inventory[i]["stock"] <= 0:
 				GameState.inventory.remove_at(i)
 			break
+	GameState.mark_chat_completed(int(order.get("chat_id", -1)))
 
-	GameState.active_order = {}
+	GameState.save_game()
 	_update_header()
 
 	dialogue_label.text = "¡Venta completada por %s!\nRecibiste: $%.0f MXN\nGanancia sumada a tu meta: +$%.0f MXN" % [
@@ -142,17 +145,34 @@ func _complete_sale(method: String) -> void:
 		profit
 	]
 	_clear_buttons()
-	if GameState.inventory.is_empty():
+
+	if GameState.has_next_delivery_stop():
+		var next_stop: Dictionary = GameState.delivery_queue[0]
+		var next_num: int = GameState.current_route_completed_stops + 2
+		_add_button("Siguiente parada (%d/%d: %s) ->" % [
+			next_num,
+			GameState.current_route_total_stops,
+			String(next_stop.get("location", "Destino"))
+		], _go_next_scene)
+	elif GameState.inventory.is_empty():
 		_add_button("Sin stock — Ir a surtir inventario", _go_next_scene)
 	else:
-		_add_button("Volver al celular (Marketplace)", _go_next_scene)
+		_add_button("Volver a casa (PhoneHub)", _go_next_scene)
 
 func _cancel_sale() -> void:
-	GameState.active_order = {}
 	_go_next_scene()
 
 func _go_next_scene() -> void:
-	if GameState.inventory.is_empty():
-		get_tree().change_scene_to_file("res://ui/InventoryApp.tscn")
+	if GameState.complete_current_stop_and_advance():
+		get_tree().change_scene_to_file("res://modules/driving/CarDashboard.tscn")
 	else:
-		get_tree().change_scene_to_file("res://ui/PhoneHub.tscn")
+		var return_leg: Dictionary = GameState.get_leg_summary(GameState.current_route_origin_id, "base")
+		GameState.advance_time(float(return_leg.get("estimated_min", 5)))
+		GameState.finish_delivery_route()
+		GameState.active_order = {}
+		GameState.save_game()
+
+		if GameState.inventory.is_empty():
+			get_tree().change_scene_to_file("res://ui/InventoryApp.tscn")
+		else:
+			get_tree().change_scene_to_file("res://ui/PhoneHub.tscn")

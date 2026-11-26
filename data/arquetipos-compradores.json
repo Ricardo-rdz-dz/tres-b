@@ -1,0 +1,305 @@
+{
+  "archetypes": [
+	{
+	  "id": "fantasma",
+	  "label": "El Fantasma",
+	  "descripcion": "Pregunta si el producto sigue disponible y desaparece sin responder, aunque el vendedor conteste en minutos.",
+	  "origen": "datos_reales",
+	  "frecuencia_aproximada": 0.42,
+	  "probabilidad_desaparecer": 0.95,
+	  "patience_minutes": 5,
+	  "late_still_interested_chance": 0.05,
+	  "offer_multiplier": 1.0,
+	  "preferred_locations": [],
+	  "profile_pool": [
+		{ "account_age": "3 meses", "friends": 45, "has_photo": false, "red_flag_score": 1 },
+		{ "account_age": "2 años", "friends": 180, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "6 meses", "friends": 90, "has_photo": true, "red_flag_score": 1 }
+	  ],
+	  "openers": [
+		"Hola, ¿todavía tienes el ${producto}?",
+		"¿Sigue disponible el ${producto}?",
+        "Hola, ¿sigue estando disponible el ${producto}?"
+	  ],
+	  "accept_reply": [],
+	  "late_interested": [],
+	  "late_lost": [
+        "(El comprador dejó de responder. El chat quedó en visto.)"
+	  ]
+	},
+	{
+	  "id": "pregunton",
+	  "label": "El Preguntón",
+	  "descripcion": "Hace preguntas sobre detalles, estado o accesorios incluidos, y muchas veces desaparece después de recibir respuestas.",
+	  "origen": "datos_reales",
+	  "frecuencia_aproximada": 0.24,
+	  "probabilidad_desaparecer": 0.8,
+	  "patience_minutes": 120,
+	  "late_still_interested_chance": 0.2,
+	  "offer_multiplier": 1.0,
+	  "preferred_locations": ["centro_civico", "plaza_central"],
+	  "profile_pool": [
+		{ "account_age": "1 año", "friends": 150, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "4 años", "friends": 320, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "8 meses", "friends": 70, "has_photo": false, "red_flag_score": 1 }
+	  ],
+	  "openers": [
+		"¿Tiene algún detalle el ${producto}?",
+		"¿Incluye caja y cargador el ${producto}?",
+		"¿Es original y sin fallas el ${producto}?",
+        "¿Le funciona todo bien? ¿De batería cómo anda el ${producto}?"
+	  ],
+	  "accept_reply": [
+        "Va, nos vemos en ${ubicacion} para checarlo."
+	  ],
+	  "late_interested": [
+		"¿Me puedes mandar más fotos del ${producto}?",
+        "¿Cuánto tiempo de uso tiene el ${producto}?"
+	  ],
+	  "late_lost": [
+		"Gracias, lo voy a pensar.",
+        "(Ya no respondió después de que le contestaste los detalles.)"
+	  ]
+	},
+	{
+	  "id": "serio",
+	  "label": "Comprador Serio",
+	  "descripcion": "Pregunta disponibilidad, confirma lugar y concreta la venta sin regatear.",
+	  "origen": "ambos",
+	  "frecuencia_aproximada": 0.1,
+	  "probabilidad_desaparecer": 0.2,
+	  "patience_minutes": 180,
+	  "late_still_interested_chance": 0.7,
+	  "offer_multiplier": 1.0,
+	  "preferred_locations": [
+		"plaza_central",
+		"plaza_norte",
+		"tienda_tech",
+		"centro_civico",
+		"galerias_del_valle",
+        "villas_del_rey"
+	  ],
+	  "profile_pool": [
+		{ "account_age": "4 años", "friends": 340, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "2 años", "friends": 185, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "3 años", "friends": 260, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "6 años", "friends": 510, "has_photo": true, "red_flag_score": 0 }
+	  ],
+	  "openers": [
+		"Hola, ¿todavía tienes disponible el ${producto} en ${precio}?",
+		"Buenas, me interesa el ${producto}. ¿Sigue disponible?",
+        "Hola, ¿sigue disponible el ${producto}? El precio de ${precio} me parece bien."
+	  ],
+	  "accept_reply": [
+		"Perfecto, me parece justo. Nos vemos en ${ubicacion}.",
+		"Trato hecho, paso por él a ${ubicacion}.",
+        "Va, ahí te veo en ${ubicacion}. Voy de ${descripcion}."
+	  ],
+	  "late_interested": [
+		"Hola, sí todavía me interesa. ¿Podemos cerrar hoy?",
+        "Igual si es seguro, sí lo quiero."
+	  ],
+	  "late_lost": [
+		"Gracias, pero como no me contestaste ya compré uno ayer.",
+        "Perdón, ya no voy a poder."
+	  ]
+	},
+	{
+	  "id": "urgido",
+	  "label": "Cliente Urgido",
+	  "descripcion": "Lo necesita hoy mismo y paga el precio publicado o un poco más si le entregan rápido.",
+	  "origen": "ambos",
+	  "frecuencia_aproximada": 0.1,
+	  "probabilidad_desaparecer": 0.85,
+	  "patience_minutes": 60,
+	  "late_still_interested_chance": 0.15,
+	  "offer_multiplier": 1.05,
+	  "preferred_locations": [
+		"tienda_tech",
+		"plaza_norte",
+		"fracc_oeste",
+		"villas_del_rey",
+		"centro_civico",
+		"galerias_del_valle",
+		"plaza_carranza",
+		"costco",
+        "a_domicilio"
+	  ],
+	  "profile_pool": [
+		{ "account_age": "5 años", "friends": 420, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "1 año", "friends": 130, "has_photo": true, "red_flag_score": 0 }
+	  ],
+	  "openers": [
+		"¡Hola! Me urge el ${producto} para hoy. Te doy ${oferta} si puedes entregarlo rápido.",
+		"Necesito el ${producto} ya mismo, te pago ${oferta} sin regatear.",
+        "Me urge el ${producto} hoy, te ofrezco ${oferta} para cerrar rápido."
+	  ],
+	  "accept_reply": [
+		"¡Súper! Salgo para ${ubicacion}, no tardes porfa.",
+        "Genial, te espero en ${ubicacion}."
+	  ],
+	  "late_interested": [
+		"Uf, todavía lo necesito, pero tiene que ser hoy mismo.",
+        "¿A qué hora puedes? Yo voy para allá ahorita."
+	  ],
+	  "late_lost": [
+        "Me urgía demasiado, ya compré otro hace rato."
+	  ]
+	},
+	{
+	  "id": "regateador",
+	  "label": "Regateador",
+	  "descripcion": "Ofrece menos de lo publicado y a veces acepta el precio completo si le queda bien el lugar.",
+	  "origen": "ambos",
+	  "frecuencia_aproximada": 0.08,
+	  "probabilidad_desaparecer": 0.5,
+	  "patience_minutes": 240,
+	  "late_still_interested_chance": 0.55,
+	  "offer_multiplier": 0.9,
+	  "preferred_locations": [
+		"plaza_central",
+		"super_este",
+		"colonia_sur",
+		"a_domicilio",
+        "villas_del_rey"
+	  ],
+	  "profile_pool": [
+		{ "account_age": "3 años", "friends": 210, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "1 año", "friends": 95, "has_photo": true, "red_flag_score": 1 },
+		{ "account_age": "2 años", "friends": 210, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "4 años", "friends": 380, "has_photo": true, "red_flag_score": 0 }
+	  ],
+	  "openers": [
+		"¿Cuánto es lo menos por el ${producto}? Te doy ${oferta} hoy mismo en efectivo.",
+		"Me interesa el ${producto}, pero solo traigo ${oferta}. ¿Te animas?",
+		"¿No me lo dejas en ${oferta} para hoy?",
+        "¿No le interesa ${oferta}? Es lo que acompleto."
+	  ],
+	  "accept_reply": [
+		"¡Excelente! Te veo en ${ubicacion} con el efectivo.",
+		"Va que va, nos vemos en ${ubicacion}.",
+        "Órale, quedamos en ${ubicacion}."
+	  ],
+	  "reject_haggle_accept": [
+        "Bueno está bien, te doy los ${precio}."
+	  ],
+	  "reject_haggle_leave": [
+        "Así está muy caro, paso. Suerte con la venta."
+	  ],
+	  "late_interested": [
+		"¿Todavía lo tienes? Mi oferta de ${oferta} sigue en pie.",
+        "¿Y si te doy ${oferta} ahorita mismo?"
+	  ],
+	  "late_lost": [
+		"Ya conseguí uno más barato en otro lado, gracias.",
+        "Bueno, lo voy a pensar."
+	  ]
+	},
+	{
+	  "id": "post_venta",
+	  "label": "El Cliente que Vuelve (Post-Venta)",
+	  "descripcion": "Ya compró antes y regresa al chat por garantía o compra repetida (reservado para fase posterior).",
+	  "origen": "datos_reales",
+	  "frecuencia_aproximada": 0.08,
+	  "probabilidad_desaparecer": 0.3,
+	  "patience_minutes": 1440,
+	  "late_still_interested_chance": 0.7,
+	  "offer_multiplier": 0.85,
+	  "preferred_locations": ["centro_civico", "a_domicilio"],
+	  "profile_pool": [
+		{ "account_age": "3 años", "friends": 290, "has_photo": true, "red_flag_score": 0 },
+		{ "account_age": "5 años", "friends": 450, "has_photo": true, "red_flag_score": 0 }
+	  ],
+	  "openers": [
+		"Hola, te compré el ${producto} y le empezó a fallar ${detalle}.",
+        "¿Cuánto me lo dejas? Soy cliente frecuente."
+	  ],
+	  "accept_reply": [
+        "Gracias, ahí nos vemos en ${ubicacion}."
+	  ],
+	  "late_interested": [
+        "Soy cliente y aparte compraré uno más, ¿qué dices?"
+	  ],
+	  "late_lost": [
+        "Bueno, lo voy a pensar."
+	  ]
+	},
+	{
+	  "id": "lowballer",
+	  "label": "El Ofertón (Lowballer)",
+	  "descripcion": "Lanza una sola oferta muy por debajo del precio (~60%) y si le dicen que no, desaparece.",
+	  "origen": "datos_reales",
+	  "frecuencia_aproximada": 0.05,
+	  "probabilidad_desaparecer": 0.95,
+	  "patience_minutes": 30,
+	  "late_still_interested_chance": 0.05,
+	  "offer_multiplier": 0.6,
+	  "preferred_locations": [],
+	  "profile_pool": [
+		{ "account_age": "1 año", "friends": 60, "has_photo": false, "red_flag_score": 1 },
+		{ "account_age": "7 meses", "friends": 110, "has_photo": true, "red_flag_score": 1 }
+	  ],
+	  "openers": [
+		"¿Aceptas ${oferta} por el ${producto}? Sin ofender.",
+		"¿Me lo dejas en ${oferta} hoy mismo?",
+        "Te ofrezco ${oferta} en efectivo ahorita, ¿te animas?"
+	  ],
+	  "accept_reply": [
+        "Va, en ${oferta} me lo quedo. Nos vemos en ${ubicacion}."
+	  ],
+	  "reject_haggle_leave": [
+		"Ok, gracias.",
+        "Ni modo, gracias."
+	  ],
+	  "late_interested": [],
+	  "late_lost": [
+		"Ok, gracias.",
+        "Ni modo, gracias."
+	  ]
+	},
+	{
+	  "id": "sospechoso",
+	  "label": "Perfil Dudoso",
+	  "descripcion": "Cuenta nueva, sin foto y con pocos amigos. Ofrece más de lo publicado pero exige entrega en zona alejada.",
+	  "origen": "diseno_usuario",
+	  "frecuencia_aproximada": null,
+	  "probabilidad_desaparecer": null,
+	  "patience_minutes": 300,
+	  "late_still_interested_chance": 0.85,
+	  "offer_multiplier": 1.1,
+	  "preferred_locations": ["zona_industrial", "fracc_oeste", "colonia_sur"],
+	  "profile_pool": [
+		{ "account_age": "3 semanas", "friends": 4, "has_photo": false, "red_flag_score": 3 },
+		{ "account_age": "1 mes", "friends": 11, "has_photo": false, "red_flag_score": 2 }
+	  ],
+	  "openers": [
+		"Qué onda, me interesa el ${producto}. Te doy ${oferta} en efectivo, solo que ahorita no tengo carro.",
+        "Te pago ${oferta} en efectivo por el ${producto}, pero necesitaría que me lo acerques."
+	  ],
+	  "accept_reply": [
+		"Va, aquí te espero en ${ubicacion}. Avísame cuando vengas llegando.",
+        "Listo, nos vemos en ${ubicacion}."
+	  ],
+	  "late_interested": [
+        "Aquí sigo, cuando quieras tráelo, tengo el dinero listo."
+	  ],
+	  "late_lost": [
+        "Ya no, gracias."
+	  ]
+	}
+  ],
+  "names": [
+	"Carlos M.",
+	"Andrea R.",
+	"Luis Fernando",
+	"Sofía G.",
+	"Kevin V.",
+	"Mariana L.",
+	"Jorge P.",
+	"Brayan_99",
+	"Valeria C.",
+	"Diego H.",
+	"Usuario Nuevo",
+    "Fernanda T."
+  ]
+}

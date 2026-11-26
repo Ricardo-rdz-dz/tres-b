@@ -18,6 +18,10 @@ var is_night: bool = false
 var inventory: Array[Dictionary] = []
 # Venta agendada actual { "buyer_name", "item", "location", "agreed_price" }
 var active_order: Dictionary = {}
+var delivery_queue: Array[Dictionary] = []
+var current_route_origin_id: String = "base"
+var current_route_total_stops: int = 0
+var current_route_completed_stops: int = 0
 
 func register_sale(cost: float, final_price: float) -> void:
 	var profit: float = final_price - cost
@@ -55,6 +59,7 @@ func _process(delta: float) -> void:
 func advance_time(minutes: float) -> void:
 	if minutes <= 0.0:
 		return
+	check_scheduled_chats()
 
 	time_in_minutes += minutes
 
@@ -195,6 +200,48 @@ var city_locations: Dictionary = {
 		"type": "domicilio",
 		"pos": Vector2(88, 85),
 		"risk_level": 0.40
+	 }, 
+	"centro_civico": {
+		"name": "Centro Cívico",
+		"type": "plaza",
+		"pos": Vector2(54, 48),
+		"risk_level": 0.05
+	},
+	"galerias_del_valle": {
+		"name": "Galerías del Valle",
+		"type": "plaza",
+		"pos": Vector2(68, 66),
+		"risk_level": 0.05
+	},
+	"plaza_carranza": {
+		"name": "Plaza Carranza",
+		"type": "plaza",
+		"pos": Vector2(82, 46),
+		"risk_level": 0.08
+	},
+	"costco": {
+		"name": "Costco",
+		"type": "tienda",
+		"pos": Vector2(62, 60),
+		"risk_level": 0.05
+	},
+	"villas_del_rey": {
+		"name": "Villas del Rey",
+		"type": "domicilio",
+		"pos": Vector2(36, 74),
+		"risk_level": 0.20
+	},
+	"punto_medio": {
+		"name": "Punto Medio Acordado",
+		"type": "plaza",
+		"pos": Vector2(52, 54),
+		"risk_level": 0.10
+	},
+	"a_domicilio": {
+		"name": "Domicilio del Cliente",
+		"type": "domicilio",
+		"pos": Vector2(22, 70),
+		"risk_level": 0.30
 	}
 }
 
@@ -236,7 +283,7 @@ signal goals_updated(level: int, goals: Array)
 signal goal_completed(goal: Dictionary)
 signal level_completed(completed_level: int, next_level: int)
 
-var current_level: int = 1
+var current_level: int = 2
 var active_goals: Array[Dictionary] = []
 
 # Plantillas base de metas por nivel (puedes editar montos o nombres luego)
@@ -456,6 +503,186 @@ var dialogues_catalog: Dictionary = {}
 var active_chats: Array[Dictionary] = []
 var _next_chat_id: int = 1
 
+const PLAYER_DELIVERY_OPTIONS: Array[String] = [
+	"centro_civico",
+	"galerias_del_valle",
+	"plaza_carranza",
+	"costco",
+	"plaza_central"
+]
+
+func get_route_with_fuel(loc_id: String) -> Dictionary:
+	var info: Dictionary = get_route_summary(loc_id).duplicate()
+	var km: float = float(info.get("distance_km", 2.0))
+	# Estimado ida y vuelta (~$5 MXN por km de distancia lineal, redondeado a $5)
+	var fuel_cost: float = maxf(10.0, snappedf(km * 5.0, 5.0))
+	info["fuel_cost"] = fuel_cost
+	return info
+func get_max_route_stops() -> int:
+	# Nivel 1: 1 entrega (sin rutas múltiples) | Nivel 2: 2 | ... | Nivel 5+: máx 5
+	return clampi(current_level, 1, 5)
+
+func _get_location_coords(loc_id: String) -> Vector2:
+	if loc_id == "" or loc_id == "base":
+		# Si tu base usa una variable distinta a Vector2.ZERO, ponla aquí
+		return city_locations.get("base", {}).get("pos", Vector2.ZERO)
+	return city_locations.get(loc_id, {}).get("pos", Vector2.ZERO)
+
+func get_leg_summary(from_loc_id: String, to_loc_id: String) -> Dictionary:
+	var from_pos: Vector2 = _get_location_coords(from_loc_id)
+	var to_pos: Vector2 = _get_location_coords(to_loc_id)
+	var km: float = maxf(0.5, snappedf(from_pos.distance_to(to_pos), 0.1))
+	var est_min: int = maxi(2, int(round(km * 1.4)))
+	# $2.5 por km real recorrido (como el circuito incluye ida y vuelta, equivale a los $5/km lineales)
+	var fuel_cost: float = maxf(5.0, snappedf(km * 2.5, 5.0))
+	var dest_name: String = "Base" if (to_loc_id == "" or to_loc_id == "base") else String(city_locations.get(to_loc_id, {}).get("name", to_loc_id))
+	return {
+		"from_id": from_loc_id,
+		"to_id": to_loc_id,
+		"name": dest_name,
+		"distance_km": km,
+		"estimated_min": est_min,
+		"fuel_cost": fuel_cost
+	}
+
+func calculate_multi_stop_route(chat_ids: Array) -> Dictionary:
+	var legs: Array[Dictionary] = []
+	var total_km: float = 0.0
+	var total_min: int = 0
+	var current_origin: String = "base"
+
+	for raw_id in chat_ids:
+		var chat: Dictionary = get_chat_by_id(int(raw_id))
+		if chat.is_empty():
+			continue
+		var dest_id: String = String(chat.get("location_id", ""))
+		if dest_id == "":
+			continue
+		var leg: Dictionary = get_leg_summary(current_origin, dest_id)
+		leg["chat_id"] = int(chat["id"])
+		leg["client_name"] = String(chat.get("client_name", "Cliente"))
+		legs.append(leg)
+		total_km += float(leg["distance_km"])
+		total_min += int(leg["estimated_min"])
+		current_origin = dest_id
+
+	# Sumar el tramo de regreso desde la última parada hasta la base
+	var return_leg: Dictionary = {}
+	if not legs.is_empty():
+		return_leg = get_leg_summary(current_origin, "base")
+		total_km += float(return_leg["distance_km"])
+		total_min += int(return_leg["estimated_min"])
+
+	var total_fuel: float = maxf(10.0, snappedf(total_km * 2.5, 5.0)) if not legs.is_empty() else 0.0
+	return {
+		"legs": legs,
+		"return_leg": return_leg,
+		"total_km": snappedf(total_km, 0.1),
+		"total_min": total_min,
+		"total_fuel": total_fuel
+	}
+func start_delivery_route(chat_ids: Array) -> bool:
+	delivery_queue.clear()
+	current_route_origin_id = "base"
+	current_route_completed_stops = 0
+
+	var max_stops: int = get_max_route_stops()
+	for raw_id in chat_ids:
+		if delivery_queue.size() >= max_stops:
+			break
+		var chat: Dictionary = get_chat_by_id(int(raw_id))
+		if chat.is_empty() or String(chat.get("status", "")) != "accepted":
+			continue
+		delivery_queue.append({
+			"chat_id": int(chat["id"]),
+			"client_name": String(chat.get("client_name", "Cliente")),
+			"buyer_name": String(chat.get("client_name", "Cliente")),
+			"item": chat.get("item", {}).duplicate(true),
+			"price": float(chat.get("offered_price", 0.0)),
+			"agreed_price": float(chat.get("offered_price", 0.0)),
+			"location_id": String(chat.get("location_id", "")),
+			"location_name": String(chat.get("location_name", "")),
+			"location": String(chat.get("location_name", "")),
+			"scheduled_total_min": float(chat.get("scheduled_total_min", 0.0)),
+			"profile": chat.get("profile", {}).duplicate(true),
+			"archetype_id": String(chat.get("archetype_id", "serio"))
+		})
+
+	if delivery_queue.is_empty():
+		current_route_total_stops = 0
+		return false
+
+	current_route_total_stops = delivery_queue.size()
+	return _load_next_stop_into_active_order()
+
+func _load_next_stop_into_active_order() -> bool:
+	prune_expired_queued_stops()
+	if delivery_queue.is_empty():
+		finish_delivery_route()
+		return false
+
+	var next_stop: Dictionary = delivery_queue.pop_front()
+	var leg: Dictionary = get_leg_summary(current_route_origin_id, String(next_stop["location_id"]))
+	next_stop["leg"] = leg
+	active_order = next_stop
+	return true
+
+func has_next_delivery_stop() -> bool:
+	prune_expired_queued_stops()
+	return not delivery_queue.is_empty()
+
+func complete_current_stop_and_advance() -> bool:
+	if not active_order.is_empty():
+		var finished_chat_id: int = int(active_order.get("chat_id", -1))
+		mark_chat_completed(finished_chat_id)
+		current_route_origin_id = String(active_order.get("location_id", "base"))
+		current_route_completed_stops += 1
+
+	return _load_next_stop_into_active_order()
+
+func prune_expired_queued_stops() -> void:
+	if delivery_queue.is_empty():
+		return
+	var now_total: float = get_total_game_minutes()
+	var kept: Array[Dictionary] = []
+	var changed: bool = false
+
+	for stop in delivery_queue:
+		var target_min: float = float(stop.get("scheduled_total_min", 0.0))
+		if target_min > 0.0 and now_total > target_min + 45.0:
+			var cid: int = int(stop.get("chat_id", -1))
+			var chat: Dictionary = get_chat_by_id(cid)
+			if not chat.is_empty() and String(chat.get("status", "")) == "accepted":
+				append_chat_message(cid, "client", "Ya te esperé mucho tiempo, ya no lo quiero, gracias.")
+				chat["status"] = "lost"
+				chat["stage"] = "closed"
+				chat["unread"] = true
+			changed = true
+		else:
+			kept.append(stop)
+
+	delivery_queue = kept
+	if changed:
+		chats_updated.emit()
+
+func finish_delivery_route() -> void:
+	delivery_queue.clear()
+	current_route_origin_id = "base"
+	current_route_total_stops = 0
+	current_route_completed_stops = 0
+
+func mark_chat_completed(chat_id: int) -> void:
+	if chat_id == -1:
+		return
+	var chat: Dictionary = get_chat_by_id(chat_id)
+	if chat.is_empty():
+		return
+	if String(chat.get("status", "")) != "lost":
+		chat["status"] = "completed"
+		chat["stage"] = "closed"
+		chat["unread"] = false
+		chats_updated.emit()
+
 func load_dialogues_catalog() -> bool:
 	if not dialogues_catalog.is_empty():
 		return true
@@ -488,8 +715,47 @@ func format_message_timestamp(msg_day: int, msg_time_str: String) -> String:
 func _fill_template(template: String, vars: Dictionary) -> String:
 	var result: String = template
 	for key in vars.keys():
-		result = result.replace("{%s}" % str(key), str(vars[key]))
+		var val: String = str(vars[key])
+		result = result.replace("${%s}" % str(key), val)
+		result = result.replace("{%s}" % str(key), val)
 	return result
+
+func _pick_random_str(arr: Array, fallback: String) -> String:
+	if arr.is_empty():
+		return fallback
+	return String(arr[randi() % arr.size()])
+
+func _pick_weighted_archetype(archetypes: Array) -> Dictionary:
+	var valid: Array = []
+	for a in archetypes:
+		if String(a.get("id", "")) != "post_venta":
+			valid.append(a)
+	if valid.is_empty():
+		return archetypes[0]
+
+	var total_weight: float = 0.0
+	var weights: Array[float] = []
+	for a in valid:
+		var raw_f: Variant = a.get("frecuencia_aproximada", 0.06)
+		var w: float = 0.06 if raw_f == null else maxf(float(raw_f), 0.02)
+		weights.append(w)
+		total_weight += w
+
+	var roll: float = randf() * total_weight
+	var acc: float = 0.0
+	for i in range(valid.size()):
+		acc += weights[i]
+		if roll <= acc:
+			return valid[i]
+	return valid[0]
+
+func _get_suggested_hour_str() -> String:
+	var future_hour: int = (get_current_hour() + randi_range(1, 3)) % 24
+	var suffix: String = "AM" if future_hour < 12 else "PM"
+	var h12: int = future_hour % 12
+	if h12 == 0:
+		h12 = 12
+	return "%d:00 %s" % [h12, suffix]
 
 func generate_incoming_chat() -> Dictionary:
 	if inventory.is_empty():
@@ -502,8 +768,8 @@ func generate_incoming_chat() -> Dictionary:
 	if archetypes.is_empty():
 		return {}
 
-	var arch: Dictionary = archetypes[randi() % archetypes.size()]
-	var client_name: String = String(names[randi() % names.size()])
+	var arch: Dictionary = _pick_weighted_archetype(archetypes)
+	var client_name: String = _pick_random_str(names, "Cliente")
 	var item: Dictionary = inventory[randi() % inventory.size()]
 
 	var item_name: String = String(item.get("name", "Equipo"))
@@ -511,8 +777,8 @@ func generate_incoming_chat() -> Dictionary:
 	var base_price: float = float(item.get("price", item.get("sell_price", snappedf(item_cost * 1.35, 50.0))))
 	var offer_price: float = snappedf(base_price * float(arch.get("offer_multiplier", 1.0)), 50.0)
 
-	var pref_locs: Array = arch.get("preferred_locations", ["plaza_central"])
-	var loc_id: String = String(pref_locs[randi() % pref_locs.size()])
+	var pref_locs: Array = arch.get("preferred_locations", [])
+	var loc_id: String = _pick_random_str(pref_locs, "punto_medio")
 	var route_info: Dictionary = get_route_summary(loc_id)
 
 	var profile_pool: Array = arch.get("profile_pool", [])
@@ -520,18 +786,28 @@ func generate_incoming_chat() -> Dictionary:
 	if not profile_pool.is_empty():
 		profile = profile_pool[randi() % profile_pool.size()].duplicate(true)
 
-	var openers: Array = arch.get("openers", ["Hola, ¿sigue disponible el {producto}?"])
-	var raw_opener: String = String(openers[randi() % openers.size()])
+	var raw_opener: String = _pick_random_str(arch.get("openers", []), "Hola, ¿sigue disponible el ${producto}?")
 	var vars: Dictionary = {
 		"producto": item_name,
-		"precio": int(base_price),
-		"oferta": int(offer_price),
-		"ubicacion": route_info["name"]
+		"precio": "$%d" % int(base_price),
+		"oferta": "$%d" % int(offer_price),
+		"ubicacion": route_info["name"],
+		"hora": _get_suggested_hour_str(),
+		"descripcion": _pick_random_str(["camisa azul", "gorra negra", "sudadera gris", "carro blanco"], "camisa azul"),
+		"detalle": _pick_random_str(["la batería", "el touch", "el cargador"], "la batería"),
+		"color": _pick_random_str(["negro", "azul", "blanco", "gris"], "negro")
 	}
 	var opener_text: String = _fill_template(raw_opener, vars)
 
+	var raw_ghost: Variant = arch.get("probabilidad_desaparecer", 0.2)
+	var ghost_chance: float = 0.15 if raw_ghost == null else float(raw_ghost)
+
 	var now_total: float = get_total_game_minutes()
 	var now_str: String = get_formatted_time()
+
+	var arch_id: String = String(arch.get("id", "serio"))
+	var haggle_archetypes: Array[String] = ["regateador", "lowballer", "urgido", "sospechoso"]
+	var initial_stage: String = "haggle" if haggle_archetypes.has(arch_id) else "inquiry"
 
 	var chat: Dictionary = {
 		"id": _next_chat_id,
@@ -541,13 +817,19 @@ func generate_incoming_chat() -> Dictionary:
 		"item": item.duplicate(true),
 		"base_price": base_price,
 		"offered_price": offer_price,
-		"location_id": loc_id,
-		"location_name": route_info["name"],
+		"location_id": "",
+		"location_name": "Por acordar",
+		"preferred_location_id": loc_id,
+		"preferred_locations": pref_locs.duplicate(),
+		"counter_location_id": "",
 		"profile": profile,
 		"patience_minutes": float(arch.get("patience_minutes", 180.0)),
 		"late_chance": float(arch.get("late_still_interested_chance", 0.5)),
+		"ghost_chance": ghost_chance,
+		"vars": vars,
 		"unread": true,
-		"status": "open", # open, accepted, lost, rejected
+		"stage": initial_stage, # inquiry, haggle, location, counter_location, closed
+		"status": "open",       # open, accepted, lost, rejected
 		"created_total_min": now_total,
 		"last_updated_total_min": now_total,
 		"last_msg_day": current_day,
@@ -567,6 +849,8 @@ func generate_incoming_chat() -> Dictionary:
 	new_chat_received.emit(chat)
 	chats_updated.emit()
 	return chat
+
+
 
 func get_sorted_chats() -> Array[Dictionary]:
 	var sorted: Array[Dictionary] = active_chats.duplicate()
@@ -608,68 +892,319 @@ func append_chat_message(chat_id: int, sender: String, text: String) -> void:
 		chat["unread"] = true
 	chats_updated.emit()
 
+func _get_archetype_by_id(arch_id: String) -> Dictionary:
+	for a in dialogues_catalog.get("archetypes", []):
+		if String(a.get("id", "")) == arch_id:
+			return a
+	return {}
+
 func respond_to_chat(chat_id: int, action: String) -> String:
-	# action: "accept" (acepta oferta), "counter_full" (pide precio completo), "reject" (rechaza)
 	var chat: Dictionary = get_chat_by_id(chat_id)
 	if chat.is_empty() or chat["status"] != "open":
 		return "closed"
 
-	var arch: Dictionary = {}
-	for a in dialogues_catalog.get("archetypes", []):
-		if String(a.get("id", "")) == String(chat["archetype_id"]):
-			arch = a
-			break
-
-	var vars: Dictionary = {
-		"producto": String(chat["item"].get("name", "Equipo")),
-		"precio": int(chat["base_price"]),
-		"oferta": int(chat["offered_price"]),
-		"ubicacion": String(chat["location_name"])
-	}
+	var arch: Dictionary = _get_archetype_by_id(String(chat["archetype_id"]))
+	var vars: Dictionary = chat.get("vars", {}).duplicate()
+	vars["producto"] = String(chat["item"].get("name", "Equipo"))
+	vars["precio"] = "$%d" % int(chat["base_price"])
+	vars["oferta"] = "$%d" % int(chat["offered_price"])
 
 	if action == "reject":
-		append_chat_message(chat_id, "player", "Por el momento no me conviene, gracias.")
+		var stage: String = String(chat.get("stage", "inquiry"))
+		if stage == "inquiry":
+			append_chat_message(chat_id, "player", "Hola, por el momento ya lo tengo apartado, gracias.")
+		else:
+			append_chat_message(chat_id, "player", "Por el momento no me conviene la oferta, gracias.")
 		chat["status"] = "rejected"
+		chat["stage"] = "closed"
 		chats_updated.emit()
 		return "rejected"
 
-	var player_msg: String = "¡Trato hecho en $%d! Nos vemos en %s." % [int(chat["offered_price"]), chat["location_name"]]
-	if action == "counter_full":
-		player_msg = "Lo menos son $%d, ¿te animas?" % int(chat["base_price"])
-	append_chat_message(chat_id, "player", player_msg)
+	# 1. Mensaje natural del jugador según la etapa
+	if action == "confirm_available":
+		append_chat_message(chat_id, "player", "Sí, todavía está disponible en $%d." % int(chat["base_price"]))
+	elif action == "counter_full":
+		append_chat_message(chat_id, "player", "Lo menos son $%d, ¿te animas?" % int(chat["base_price"]))
+	elif action == "accept_offer":
+		append_chat_message(chat_id, "player", "Va, te acepto los $%d." % int(chat["offered_price"]))
 
-	# Evaluar si el jugador respondió tarde (incluso al día siguiente)
+	# 2. El Fantasma suele dejar en visto aquí
+	if String(chat["archetype_id"]) == "fantasma" and randf() <= float(chat.get("ghost_chance", 0.95)):
+		var ghost_text: String = _pick_random_str(arch.get("late_lost", []), "(El comprador dejó de responder. El chat quedó en visto.)")
+		append_chat_message(chat_id, "client", _fill_template(ghost_text, vars))
+		chat["status"] = "lost"
+		chat["stage"] = "closed"
+		chats_updated.emit()
+		return "lost"
+
+	# 3. Revisar si contestaste tarde (incluso al día siguiente)
 	var elapsed_min: float = get_total_game_minutes() - float(chat["created_total_min"])
 	if elapsed_min > float(chat["patience_minutes"]):
 		if randf() > float(chat["late_chance"]):
-			var lost_pool: Array = arch.get("late_lost", ["Ya compré otro, gracias."])
-			var lost_text: String = _fill_template(String(lost_pool[randi() % lost_pool.size()]), vars)
-			append_chat_message(chat_id, "client", lost_text)
+			var lost_raw: String = _pick_random_str(arch.get("late_lost", []), "Ya compré otro, gracias.")
+			append_chat_message(chat_id, "client", _fill_template(lost_raw, vars))
 			chat["status"] = "lost"
+			chat["stage"] = "closed"
 			chats_updated.emit()
 			return "lost"
-		else:
-			var late_ok_pool: Array = arch.get("late_interested", ["Sí, todavía me interesa."])
-			var late_ok_text: String = _fill_template(String(late_ok_pool[randi() % late_ok_pool.size()]), vars)
-			append_chat_message(chat_id, "client", late_ok_text)
 
+	# 4. Si mantuviste el precio ante un regateo
 	if action == "counter_full":
-		if randf() <= 0.55:
-			var ok_pool: Array = arch.get("reject_haggle_accept", ["Está bien, te doy los ${precio}."])
-			append_chat_message(chat_id, "client", _fill_template(String(ok_pool[randi() % ok_pool.size()]), vars))
-			chat["offered_price"] = chat["base_price"]
-			chat["status"] = "accepted"
-			chats_updated.emit()
-			return "accepted"
-		else:
-			var leave_pool: Array = arch.get("reject_haggle_leave", ["Así está caro, paso."])
-			append_chat_message(chat_id, "client", _fill_template(String(leave_pool[randi() % leave_pool.size()]), vars))
+		if String(chat["archetype_id"]) == "lowballer" or randf() > 0.55:
+			var leave_raw: String = _pick_random_str(arch.get("reject_haggle_leave", []), "Así está caro, paso. Gracias.")
+			append_chat_message(chat_id, "client", _fill_template(leave_raw, vars))
 			chat["status"] = "lost"
+			chat["stage"] = "closed"
 			chats_updated.emit()
 			return "lost"
+		else:
+			chat["offered_price"] = chat["base_price"]
+			vars["oferta"] = vars["precio"]
+			append_chat_message(chat_id, "client", "Bueno está bien, te doy los %s. ¿Dónde entregas?" % vars["precio"])
+			chat["stage"] = "location"
+			chats_updated.emit()
+			return "location"
 
-	var accept_pool: Array = arch.get("accept_reply", ["Perfecto, te veo en {ubicacion}."])
-	append_chat_message(chat_id, "client", _fill_template(String(accept_pool[randi() % accept_pool.size()]), vars))
-	chat["status"] = "accepted"
+	# 5. Perfil Dudoso siempre insiste en su zona desde el inicio
+	if String(chat["archetype_id"]) == "sospechoso":
+		var pref_id: String = String(chat.get("preferred_location_id", "zona_industrial"))
+		var pref_info: Dictionary = get_route_with_fuel(pref_id)
+		chat["counter_location_id"] = pref_id
+		append_chat_message(chat_id, "client", "Sí lo quiero, pero ahorita no tengo carro. Solo puedo en %s, ¿te animas?" % pref_info["name"])
+		chat["stage"] = "counter_location"
+		chats_updated.emit()
+		return "counter_location"
+
+	# 6. Flujo normal: pasan a negociar el punto de entrega
+	append_chat_message(chat_id, "client", "Perfecto, sí me interesa en $%d. ¿Dónde entregas?" % int(chat["offered_price"]))
+	chat["stage"] = "location"
+	chats_updated.emit()
+	return "location"
+
+func propose_delivery_location(chat_id: int, loc_id: String) -> String:
+	var chat: Dictionary = get_chat_by_id(chat_id)
+	if chat.is_empty() or chat["status"] != "open":
+		return "closed"
+
+	var chosen_info: Dictionary = get_route_with_fuel(loc_id)
+	append_chat_message(chat_id, "player", "Puedo entregar en %s, ¿te queda bien?" % chosen_info["name"])
+
+	var pref_locs: Array = chat.get("preferred_locations", [])
+	var is_preferred: bool = pref_locs.has(loc_id)
+	var accepts_player_spot: bool = is_preferred or (randf() <= 0.45)
+
+	if accepts_player_spot:
+		chat["location_id"] = loc_id
+		chat["location_name"] = chosen_info["name"]
+		var arch: Dictionary = _get_archetype_by_id(String(chat["archetype_id"]))
+		var vars: Dictionary = chat.get("vars", {}).duplicate()
+		vars["ubicacion"] = chosen_info["name"]
+		vars["precio"] = "$%d" % int(chat["offered_price"])
+		vars["oferta"] = "$%d" % int(chat["offered_price"])
+		append_chat_message(chat_id, "client", "Perfecto, me queda bien en %s. ¿Qué día y a qué hora nos vemos?" % chosen_info["name"])
+		chat["stage"] = "scheduling"
+		chats_updated.emit()
+		return "accepted"
+	else:
+		# El cliente contrapropone su zona
+		var counter_id: String = String(chat.get("preferred_location_id", "villas_del_rey"))
+		if counter_id == loc_id or counter_id == "":
+			counter_id = "a_domicilio"
+		var counter_info: Dictionary = get_route_with_fuel(counter_id)
+		chat["counter_location_id"] = counter_id
+		append_chat_message(chat_id, "client", "Me queda muy lejos. Sí lo quiero, pero solo puedo en %s. ¿Puedes venir para acá?" % counter_info["name"])
+		chat["stage"] = "counter_location"
+		chats_updated.emit()
+		return "counter_location"
+
+func respond_counter_location(chat_id: int, accept_counter: bool) -> String:
+	var chat: Dictionary = get_chat_by_id(chat_id)
+	if chat.is_empty() or chat["status"] != "open":
+		return "closed"
+
+	if not accept_counter:
+		append_chat_message(chat_id, "player", "Me queda muy lejos por la gasolina y el tiempo, paso. Gracias.")
+		append_chat_message(chat_id, "client", "Ni modo, suerte con la venta.")
+		chat["status"] = "rejected"
+		chat["stage"] = "closed"
+		chats_updated.emit()
+		return "rejected"
+
+	var loc_id: String = String(chat.get("counter_location_id", "punto_medio"))
+	var info: Dictionary = get_route_with_fuel(loc_id)
+	chat["location_id"] = loc_id
+	chat["location_name"] = info["name"]
+	append_chat_message(chat_id, "player", "Va, sí me aviento hasta %s." % info["name"])
+	append_chat_message(chat_id, "client", "¡Excelente! ¿Qué día y a qué hora nos vemos en %s?" % info["name"])
+	chat["stage"] = "scheduling"
 	chats_updated.emit()
 	return "accepted"
+
+func _format_hour_12(total_min: float) -> String:
+	var mins_in_day: int = int(total_min) % 1440
+	var h24: int = mins_in_day / 60
+	var m: int = mins_in_day % 60
+	var suffix: String = "AM" if h24 < 12 else "PM"
+	var h12: int = h24 % 12
+	if h12 == 0:
+		h12 = 12
+	return "%d:%02d %s" % [h12, m, suffix]
+
+func get_scheduling_options() -> Array[Dictionary]:
+	var options: Array[Dictionary] = []
+	var now_total: float = get_total_game_minutes()
+	var mins_in_day: float = fmod(now_total, 1440.0)
+	var day_start: float = now_total - mins_in_day
+
+	# Opción 1: En 1 hora (si no pasa de las 10:00 PM)
+	if mins_in_day + 60.0 <= 22.0 * 60.0:
+		var t1: float = snappedf(now_total + 60.0, 30.0)
+		options.append({
+			"label": "Hoy en ~1 hora (%s)" % _format_hour_12(t1),
+			"target_total_min": t1,
+			"is_tomorrow": false
+		})
+
+	# Opción 2: Hoy más tarde (+4 horas, si no pasa de las 10:00 PM)
+	if mins_in_day + 240.0 <= 22.0 * 60.0:
+		var t2: float = snappedf(now_total + 240.0, 30.0)
+		options.append({
+			"label": "Hoy más tarde (%s)" % _format_hour_12(t2),
+			"target_total_min": t2,
+			"is_tomorrow": false
+		})
+
+	# Opción 3 y 4: Mañana mañana y mañana tarde
+	var tomorrow_start: float = day_start + 1440.0
+	options.append({
+		"label": "Mañana · 10:00 AM",
+		"target_total_min": tomorrow_start + 10.0 * 60.0,
+		"is_tomorrow": true
+	})
+	options.append({
+		"label": "Mañana · 4:00 PM",
+		"target_total_min": tomorrow_start + 16.0 * 60.0,
+		"is_tomorrow": true
+	})
+	return options
+
+func schedule_delivery(chat_id: int, target_total_min: float, label_str: String, is_tomorrow: bool) -> String:
+	var chat: Dictionary = get_chat_by_id(chat_id)
+	if chat.is_empty() or chat["status"] != "open":
+		return "closed"
+
+	append_chat_message(chat_id, "player", "¿Te parece %s en %s?" % [label_str, chat["location_name"]])
+
+	# Si es Cliente Urgido y lo mandas para mañana, busca otro vendedor
+	if String(chat["archetype_id"]) == "urgido" and is_tomorrow:
+		append_chat_message(chat_id, "client", "Uf, me urge para hoy mismo. Mejor busco otro, gracias.")
+		chat["status"] = "lost"
+		chat["stage"] = "closed"
+		chats_updated.emit()
+		return "lost"
+
+	chat["scheduled_total_min"] = target_total_min
+	chat["scheduled_label"] = label_str
+	chat["confirm_notified"] = false
+
+	var minutes_until: float = target_total_min - get_total_game_minutes()
+	if minutes_until <= 120.0:
+		# Si es en 2 horas o menos, queda confirmada al instante
+		var arch: Dictionary = _get_archetype_by_id(String(chat["archetype_id"]))
+		var vars: Dictionary = chat.get("vars", {}).duplicate()
+		vars["ubicacion"] = String(chat["location_name"])
+		var accept_raw: String = _pick_random_str(arch.get("accept_reply", []), "Perfecto, nos vemos en ${ubicacion}.")
+		append_chat_message(chat_id, "client", _fill_template(accept_raw, vars))
+		chat["status"] = "accepted"
+		chat["stage"] = "closed"
+		chats_updated.emit()
+		return "accepted"
+	else:
+		# Cita a futuro: requiere confirmación 2 horas antes
+		append_chat_message(chat_id, "client", "Va, quedamos %s en %s. Me mandas mensaje unas 2 horas antes para confirmar." % [label_str, chat["location_name"]])
+		chat["status"] = "scheduled"
+		chat["stage"] = "scheduled"
+		chats_updated.emit()
+		return "scheduled"
+
+func get_confirmation_state(chat: Dictionary) -> String:
+	if String(chat.get("status", "")) != "scheduled":
+		return "none"
+	var minutes_left: float = float(chat.get("scheduled_total_min", 0.0)) - get_total_game_minutes()
+	if minutes_left < -30.0:
+		return "expired"
+	elif minutes_left <= 120.0:
+		return "ready"
+	return "too_early"
+
+func confirm_scheduled_delivery(chat_id: int) -> String:
+	var chat: Dictionary = get_chat_by_id(chat_id)
+	if chat.is_empty() or chat["status"] != "scheduled":
+		return "closed"
+
+	append_chat_message(chat_id, "player", "¿Qué tal? Solo para confirmar nuestra entrega en %s (%s)." % [
+		chat["location_name"], String(chat.get("scheduled_label", ""))
+	])
+
+	# Probabilidad de que confirme según el arquetipo
+	var arch_id: String = String(chat["archetype_id"])
+	var confirm_chance: float = 0.85
+	if arch_id == "serio" or arch_id == "sospechoso":
+		confirm_chance = 0.92
+	elif arch_id == "regateador":
+		confirm_chance = 0.75
+	elif arch_id == "pregunton":
+		confirm_chance = 0.60
+
+	if randf() <= confirm_chance:
+		append_chat_message(chat_id, "client", "¡Sí, confirmado! Ahí te veo en %s." % chat["location_name"])
+		chat["status"] = "accepted"
+		chat["stage"] = "closed"
+		chats_updated.emit()
+		return "accepted"
+	else:
+		append_chat_message(chat_id, "client", "Perdón, me salió un imprevisto y ya no voy a poder ir. Qué pena.")
+		chat["status"] = "lost"
+		chat["stage"] = "closed"
+		chats_updated.emit()
+		return "lost"
+
+func check_scheduled_chats() -> void:
+	var changed: bool = false
+	var now_total: float = get_total_game_minutes()
+
+	for chat in active_chats:
+		var status: String = String(chat.get("status", ""))
+		if status == "scheduled":
+			var state: String = get_confirmation_state(chat)
+			if state == "ready" and not bool(chat.get("confirm_notified", false)):
+				chat["confirm_notified"] = true
+				chat["unread"] = true
+				changed = true
+			elif state == "expired":
+				append_chat_message(int(chat["id"]), "client", "Como nunca me confirmaste antes de la hora, ya no fui. Gracias.")
+				chat["status"] = "lost"
+				chat["stage"] = "closed"
+				changed = true
+		elif status == "accepted":
+			# No cancelar el pedido que ya está activo en ruta o entrega
+			if not active_order.is_empty() and int(active_order.get("chat_id", -1)) == int(chat.get("id", -2)):
+				continue
+			var target_min: float = float(chat.get("scheduled_total_min", 0.0))
+			if target_min > 0.0 and now_total > target_min + 45.0:
+				append_chat_message(int(chat["id"]), "client", "Te estuve esperando en %s pero nunca llegaste. Ya mejor paso, gracias." % String(chat.get("location_name", "el punto")))
+				chat["status"] = "lost"
+				chat["stage"] = "closed"
+				chat["unread"] = true
+				changed = true
+
+	if changed:
+		chats_updated.emit()
+		
+func get_open_chats_count() -> int:
+	var count: int = 0
+	for c in active_chats:
+		var st: String = String(c.get("status", ""))
+		if st == "open" or st == "scheduled" or st == "accepted":
+			count += 1
+	return count
