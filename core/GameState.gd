@@ -47,12 +47,19 @@ var time_in_minutes: float = 480.0 # Inicia a las 08:00 AM (8 * 60)
 var is_clock_running: bool = false
 var clock_speed: float = 1.0 # 0.0 = pausa, 1.0 = normal, 2.5 = rápido
 var base_minutes_per_second: float = 2.0 # A velocidad 1x: 1 seg real = 2 min en juego
+var is_time_paused: bool = false
 
 var _last_emitted_minute: int = -1
 var _current_phase: DayPhase = DayPhase.MORNING
 
+func toggle_time_pause() -> bool:
+	is_time_paused = not is_time_paused
+	return is_time_paused
+
 func _process(delta: float) -> void:
 	if not is_clock_running or clock_speed <= 0.0:
+		return
+	if is_time_paused:
 		return
 	advance_time(delta * base_minutes_per_second * clock_speed)
 

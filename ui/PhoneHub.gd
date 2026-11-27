@@ -14,11 +14,23 @@ var show_profile_panel: bool = false
 var _incoming_timer: Timer
 var selected_route_ids: Array[int] = []
 var show_route_planner: bool = false
+var pause_btn: Button = null
 
 func _ready() -> void:
 	GameState.start_clock()
 	GameState.time_updated.connect(_on_time_updated)
 	speed_button.pressed.connect(_on_speed_button_pressed)
+
+	# Crear botón de Pausa (⏸) justo al lado de speed_button
+	if speed_button and speed_button.get_parent():
+		pause_btn = Button.new()
+		pause_btn.text = "▶" if GameState.is_time_paused else "⏸"
+		pause_btn.pressed.connect(_on_pause_pressed)
+		var parent_bar: Node = speed_button.get_parent()
+		parent_bar.add_child(pause_btn)
+		parent_bar.move_child(pause_btn, speed_button.get_index() + 1)
+		speed_button.disabled = GameState.is_time_paused
+
 	GameState.goals_updated.connect(func(_lvl, _goals): _update_header())
 	GameState.chats_updated.connect(_refresh_ui)
 
@@ -47,8 +59,19 @@ func _ready() -> void:
 	add_child(_incoming_timer)
 
 	_refresh_ui()
+	
+
+func _on_pause_pressed() -> void:
+	var paused: bool = GameState.toggle_time_pause()
+	if pause_btn:
+		pause_btn.text = "▶" if paused else "⏸"
+	if speed_button:
+		speed_button.disabled = paused
+	_refresh_ui()
 
 func _on_incoming_timer_timeout() -> void:
+	if GameState.is_time_paused:
+		return
 	if not GameState.inventory.is_empty() and GameState.get_open_chats_count() < 8:
 		GameState.generate_incoming_chat()
 
@@ -74,6 +97,19 @@ func _refresh_ui() -> void:
 		_render_inbox()
 	else:
 		_render_chat_view(selected_chat_id)
+	# Regla de pausa táctica: solo lectura dentro del chat
+	if GameState.is_time_paused:
+		var pause_hint := Label.new()
+		pause_hint.text = "⏸ En pausa (solo lectura) · Presiona ▶ para responder"
+		pause_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pause_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		pause_hint.add_theme_color_override("font_color", Color(1.0, 0.82, 0.35, 1.0))
+		reply_buttons.add_child(pause_hint)
+		reply_buttons.move_child(pause_hint, 0)
+
+		for child in reply_buttons.get_children():
+			if child is Button and child.text != "Volver a la bandeja":
+				child.disabled = true
 
 # ==============================================================================
 # VISTA 1: BANDEJA DE CHATS (ESTILO MESSENGER / WHATSAPP)
@@ -556,6 +592,7 @@ func _create_message_bubble(msg: Dictionary) -> HBoxContainer:
 	return row
 
 func _start_delivery_from_chat(chat: Dictionary) -> void:
+	GameState.is_time_paused = false
 	if GameState.start_delivery_route([int(chat["id"])]):
 		get_tree().change_scene_to_file("res://ui/Checklist.tscn")
 
@@ -673,6 +710,7 @@ func _render_route_planner() -> void:
 		list_vbox.add_child(ret_lbl)
 
 	_add_reply_button("Salir a entregar (%d paradas) ->" % selected_route_ids.size(), func():
+		GameState.is_time_paused = false
 		if GameState.start_delivery_route(selected_route_ids):
 			selected_route_ids.clear()
 			show_route_planner = false
