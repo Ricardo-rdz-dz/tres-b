@@ -550,6 +550,15 @@ func get_leg_summary(from_loc_id: String, to_loc_id: String) -> Dictionary:
 		"estimated_min": est_min,
 		"fuel_cost": fuel_cost
 	}
+func _pick_random_client_origin() -> String:
+	var valid_ids: Array[String] = []
+	for key in city_locations.keys():
+		var k: String = String(key)
+		if k != "base" and k != "punto_medio" and k != "domicilio":
+			valid_ids.append(k)
+	if valid_ids.is_empty():
+		return "centro_civico"
+	return valid_ids[randi() % valid_ids.size()]
 
 func calculate_multi_stop_route(chat_ids: Array) -> Dictionary:
 	var legs: Array[Dictionary] = []
@@ -828,6 +837,7 @@ func generate_incoming_chat() -> Dictionary:
 		"preferred_location_id": loc_id,
 		"preferred_locations": pref_locs.duplicate(),
 		"counter_location_id": "",
+		"client_origin_id": _pick_random_client_origin(),
 		"profile": profile,
 		"patience_minutes": float(arch.get("patience_minutes", 180.0)),
 		"late_chance": float(arch.get("late_still_interested_chance", 0.5)),
@@ -995,14 +1005,27 @@ func propose_delivery_location(chat_id: int, loc_id: String) -> String:
 	var chosen_info: Dictionary = get_route_with_fuel(loc_id)
 	append_chat_message(chat_id, "player", "Puedo entregar en %s, ¿te queda bien?" % chosen_info["name"])
 
-	var pref_locs: Array = chat.get("preferred_locations", [])
-	var is_preferred: bool = pref_locs.has(loc_id)
-	var accepts_player_spot: bool = is_preferred or (randf() <= 0.45)
+	var origin_id: String = String(chat.get("client_origin_id", ""))
+	if origin_id == "":
+		origin_id = _pick_random_client_origin()
+		chat["client_origin_id"] = origin_id
+
+	# Medimos qué tan lejos le queda al cliente el punto que propusiste desde su zona
+	var dist_for_client: float = float(get_leg_summary(origin_id, loc_id).get("distance_km", 0.0))
+	var arch_id: String = String(chat.get("archetype_id", "serio"))
+
+	# El cliente urgido tolera más distancia; en punto medio toleran un poco más
+	var max_comfortable_km: float = 2.5
+	if arch_id == "urgido":
+		max_comfortable_km = 4.0
+	elif loc_id == "punto_medio":
+		max_comfortable_km = 3.2
+
+	var accepts_player_spot: bool = (loc_id == origin_id) or (dist_for_client <= max_comfortable_km)
 
 	if accepts_player_spot:
 		chat["location_id"] = loc_id
 		chat["location_name"] = chosen_info["name"]
-		var arch: Dictionary = _get_archetype_by_id(String(chat["archetype_id"]))
 		var vars: Dictionary = chat.get("vars", {}).duplicate()
 		vars["ubicacion"] = chosen_info["name"]
 		vars["precio"] = "$%d" % int(chat["offered_price"])
@@ -1012,13 +1035,21 @@ func propose_delivery_location(chat_id: int, loc_id: String) -> String:
 		chats_updated.emit()
 		return "accepted"
 	else:
-		# El cliente contrapropone su zona
-		var counter_id: String = String(chat.get("preferred_location_id", "villas_del_rey"))
+		# El cliente contrapropone su propia zona de origen
+		var counter_id: String = origin_id
 		if counter_id == loc_id or counter_id == "":
 			counter_id = "a_domicilio"
 		var counter_info: Dictionary = get_route_with_fuel(counter_id)
 		chat["counter_location_id"] = counter_id
-		append_chat_message(chat_id, "client", "Me queda muy lejos. Sí lo quiero, pero solo puedo en %s. ¿Puedes venir para acá?" % counter_info["name"])
+		append_chat_message(
+			chat_id,
+			"client",
+			"%s me queda retirado (como a %.1f km de donde estoy). Sí lo quiero, pero mejor en %s, ¿puedes venir para acá?" % [
+				chosen_info["name"],
+				dist_for_client,
+				counter_info["name"]
+			]
+		)
 		chat["stage"] = "counter_location"
 		chats_updated.emit()
 		return "counter_location"
